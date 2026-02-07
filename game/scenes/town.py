@@ -69,14 +69,14 @@ class TownScene(Scene):
         elif event.key == pygame.K_e:
             if self._try_start_dialogue():
                 return None
-            if self.grid[self.player.y][self.player.x] == TILE_DOOR:
+            if _is_on_or_adjacent(self.grid, self.player.x, self.player.y, TILE_DOOR):
                 from game.scenes.world_map import WorldMapScene
 
                 return WorldMapScene()
             return None
 
         if dx != 0 or dy != 0:
-            self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
+            self._try_move_player(dx, dy)
         return None
 
     def update(self, dt: float) -> Scene | None:
@@ -100,11 +100,10 @@ class TownScene(Scene):
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
-        hud = self.font.render(
-            "Town: move WASD/arrows  E: talk/exit  Esc: title",
-            True,
-            COLOR_TEXT,
-        )
+        hint = "Town: move WASD/arrows  E: talk/exit  Esc: title"
+        if self._interactable_npc() is not None:
+            hint = "Town: E to talk"
+        hud = self.font.render(hint, True, COLOR_TEXT)
         surface.blit(hud, (10, 8))
 
         if self.active_script is not None:
@@ -112,7 +111,7 @@ class TownScene(Scene):
             self.dialogue.draw(surface, speaker=self.active_script.speaker, line=line)
 
     def _try_start_dialogue(self) -> bool:
-        npc = self._adjacent_npc()
+        npc = self._interactable_npc()
         if npc is None:
             return False
         script = script_for_npc(npc.npc_id, STATE)
@@ -133,11 +132,28 @@ class TownScene(Scene):
         self.active_script = None
         self.active_line_index = 0
 
-    def _adjacent_npc(self) -> Npc | None:
+    def _interactable_npc(self) -> Npc | None:
         for npc in self.npcs:
-            if abs(npc.x - self.player.x) + abs(npc.y - self.player.y) == 1:
+            if abs(npc.x - self.player.x) + abs(npc.y - self.player.y) <= 1:
                 return npc
         return None
+
+    def _try_move_player(self, dx: int, dy: int) -> None:
+        nx = self.player.x + dx
+        ny = self.player.y + dy
+        if any(npc.x == nx and npc.y == ny for npc in self.npcs):
+            return
+        self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
+
+
+def _is_on_or_adjacent(grid: list[list[int]], x: int, y: int, tile: int) -> bool:
+    if grid[y][x] == tile:
+        return True
+    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        nx, ny = x + dx, y + dy
+        if 0 <= ny < len(grid) and 0 <= nx < len(grid[0]) and grid[ny][nx] == tile:
+            return True
+    return False
 
 
 def _town_layout(width: int, height: int) -> list[list[int]]:

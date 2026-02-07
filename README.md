@@ -7,7 +7,8 @@ A game that is a blend of Indy Jones and Pokemon mystery dungeon.
 
 ## Controls
 - Title: `Enter` start adventure, `P` platformer prototype, `Esc` quit
-- Home/Town: `WASD`/arrows move, `E` exit to World Map, `Esc` title
+- Home: `WASD`/arrows move, `E` exit at door, `M` World Map, `Esc` title
+- Town: `WASD`/arrows move, `E` talk/exit, `Esc` title
 - World Map: `1` home, `2` town, `3` dungeon, `Esc` title
 - Dungeon: `WASD`/arrows move (turn-based), `E` use stairs, `R` regenerate, `Esc` World Map
 - Dialogue: `Enter`/`E` next, `Esc` close

@@ -36,6 +36,11 @@ class HomeBaseScene(Scene):
 
             return TitleScene()
 
+        if event.key == pygame.K_m:
+            from game.scenes.world_map import WorldMapScene
+
+            return WorldMapScene()
+
         dx, dy = 0, 0
         if event.key in (pygame.K_LEFT, pygame.K_a):
             dx = -1
@@ -46,7 +51,7 @@ class HomeBaseScene(Scene):
         elif event.key in (pygame.K_DOWN, pygame.K_s):
             dy = 1
         elif event.key == pygame.K_e:
-            if self.grid[self.player.y][self.player.x] == TILE_DOOR:
+            if _is_on_or_adjacent(self.grid, self.player.x, self.player.y, TILE_DOOR):
                 from game.scenes.world_map import WorldMapScene
 
                 return WorldMapScene()
@@ -70,7 +75,11 @@ class HomeBaseScene(Scene):
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
-        hud = self.font.render("Home Base: WASD/arrows move  E: exit to World Map  Esc: title", True, COLOR_TEXT)
+        hud = self.font.render(
+            "Home Base: move WASD/arrows  E: exit (at door)  M: World Map  Esc: title",
+            True,
+            COLOR_TEXT,
+        )
         surface.blit(hud, (10, 8))
 
 
@@ -100,3 +109,12 @@ def _draw_grid(surface: pygame.Surface, grid: list[list[int]]) -> None:
                 color = COLOR_FLOOR
             pygame.draw.rect(surface, color, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
+
+def _is_on_or_adjacent(grid: list[list[int]], x: int, y: int, tile: int) -> bool:
+    if grid[y][x] == tile:
+        return True
+    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        nx, ny = x + dx, y + dy
+        if 0 <= ny < len(grid) and 0 <= nx < len(grid[0]) and grid[ny][nx] == tile:
+            return True
+    return False

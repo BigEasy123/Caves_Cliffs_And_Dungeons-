@@ -16,6 +16,8 @@ class WorldMapScene(Scene):
         if event.type != pygame.KEYDOWN:
             return None
 
+        self.message = ""
+
         if event.key == pygame.K_ESCAPE:
             from game.scenes.title import TitleScene
 
