@@ -139,4 +139,4 @@ class Game:
 
 
 if __name__ == "__main__":
-    Game().run() put this as the main.py
+    Game().run()
