@@ -12,9 +12,9 @@ class TitleScene(Scene):
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                from game.scenes.dungeon import DungeonScene
+                from game.scenes.home import HomeBaseScene
 
-                return DungeonScene()
+                return HomeBaseScene()
             if event.key == pygame.K_p:
                 from game.scenes.platformer import PlatformerScene
 
@@ -30,7 +30,7 @@ class TitleScene(Scene):
         surface.fill(COLOR_BG)
 
         title_surf = self.font_title.render(TITLE, True, COLOR_TEXT)
-        body1 = self.font_body.render("Enter: Start Dungeon (turn-based)", True, COLOR_TEXT)
+        body1 = self.font_body.render("Enter: Start Adventure (Home Base)", True, COLOR_TEXT)
         body2 = self.font_body.render("P: Play platformer prototype", True, COLOR_TEXT)
         body3 = self.font_body.render("Esc: Quit", True, COLOR_TEXT)
 

@@ -23,9 +23,16 @@ def _carve_v_corridor(grid: list[list[int]], y1: int, y2: int, x: int) -> None:
         grid[y][x] = 0
 
 
-def generate_dungeon(width: int, height: int, *, seed: int | None = None) -> list[list[int]]:
+def generate_dungeon(
+    width: int,
+    height: int,
+    *,
+    seed: int | None = None,
+    place_stairs_up: bool = True,
+    place_stairs_down: bool = True,
+) -> list[list[int]]:
     """
-    Returns a 2D grid: 0=floor, 1=wall.
+    Returns a 2D grid: 0=floor, 1=wall, 2=stairs_down, 3=stairs_up.
     This is intentionally simple scaffolding that we can iterate on later.
     """
     rng = random.Random(seed)
@@ -61,6 +68,7 @@ def generate_dungeon(width: int, height: int, *, seed: int | None = None) -> lis
         # Fallback: carve a simple central area
         _carve_room(grid, 2, 2, max(3, width - 4), max(3, height - 4))
 
+    _place_stairs(grid, rng, up=place_stairs_up, down=place_stairs_down)
     return grid
 
 
@@ -90,3 +98,29 @@ def _intersects_any(
             return True
     return False
 
+
+def _place_stairs(
+    grid: list[list[int]],
+    rng: random.Random,
+    *,
+    up: bool,
+    down: bool,
+) -> None:
+    floors: list[tuple[int, int]] = []
+    for y, row in enumerate(grid):
+        for x, cell in enumerate(row):
+            if cell == 0:
+                floors.append((x, y))
+
+    if not floors:
+        return
+
+    rng.shuffle(floors)
+    idx = 0
+    if up:
+        x, y = floors[idx]
+        grid[y][x] = 3
+        idx += 1
+    if down and idx < len(floors):
+        x, y = floors[idx]
+        grid[y][x] = 2

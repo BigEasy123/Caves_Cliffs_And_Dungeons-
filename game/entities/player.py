@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from random import choice
 
 
-Grid = list[list[int]]  # 0 floor, 1 wall
+Grid = list[list[int]]
 
 
 @dataclass
@@ -24,15 +24,16 @@ class GridPlayer:
         x, y = choice(floors)
         return GridPlayer(x, y)
 
-    def try_move(self, dx: int, dy: int, grid: Grid) -> None:
+    def try_move(self, dx: int, dy: int, grid: Grid, *, walls: set[int] | None = None) -> None:
         nx = self.x + dx
         ny = self.y + dy
         if ny < 0 or ny >= len(grid):
             return
         if nx < 0 or nx >= len(grid[0]):
             return
-        if grid[ny][nx] == 1:
+        if walls is None:
+            walls = {1}
+        if grid[ny][nx] in walls:
             return
         self.x = nx
         self.y = ny
-
