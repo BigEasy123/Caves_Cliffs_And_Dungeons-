@@ -5,6 +5,7 @@ from game.constants import COLOR_BG, COLOR_TEXT
 from game.scenes.base import Scene
 from game.state import STATE
 from game.story.missions import MISSIONS
+from game.ui.status_menu import StatusMenu
 
 
 class GuildScene(Scene):
@@ -15,15 +16,27 @@ class GuildScene(Scene):
         self.font = pygame.font.SysFont(None, 24)
         self.index = 0
         self.message = ""
+        self.status_menu = StatusMenu()
+        self.status_open = False
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type != pygame.KEYDOWN:
             return None
 
         if event.key == pygame.K_ESCAPE:
+            if self.status_open:
+                self.status_open = False
+                return None
             from game.scenes.town import TownScene
 
             return TownScene(self.app)
+
+        if event.key == pygame.K_i:
+            self.status_open = not self.status_open
+            return None
+
+        if self.status_open:
+            return None
 
         missions = self._available_missions()
         if not missions:
@@ -73,6 +86,9 @@ class GuildScene(Scene):
         if self.message:
             msg = self.font.render(self.message, True, (220, 190, 120))
             surface.blit(msg, (40, 420))
+
+        if self.status_open:
+            self.status_menu.draw(surface, STATE)
 
     def _available_missions(self) -> list[str]:
         return [mid for mid in MISSIONS.keys() if mid not in STATE.completed_missions]

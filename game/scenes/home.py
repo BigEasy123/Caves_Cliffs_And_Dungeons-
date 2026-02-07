@@ -18,6 +18,8 @@ from game.constants import (
 )
 from game.entities.player import GridPlayer
 from game.scenes.base import Scene
+from game.state import STATE
+from game.ui.status_menu import StatusMenu
 
 
 class HomeBaseScene(Scene):
@@ -25,6 +27,8 @@ class HomeBaseScene(Scene):
         super().__init__(app)
         self.font = pygame.font.SysFont(None, 22)
         self.app.audio.play_music(PATHS.music / "home.ogg", volume=0.45)
+        self.status_menu = StatusMenu()
+        self.status_open = False
 
         self.grid = _home_layout(GRID_WIDTH, GRID_HEIGHT)
         self.player = GridPlayer(4, 6)
@@ -40,9 +44,19 @@ class HomeBaseScene(Scene):
             return None
 
         if event.key == pygame.K_ESCAPE:
+            if self.status_open:
+                self.status_open = False
+                return None
             from game.scenes.title import TitleScene
 
             return TitleScene(self.app)
+
+        if event.key == pygame.K_i:
+            self.status_open = not self.status_open
+            return None
+
+        if self.status_open:
+            return None
 
         if event.key == pygame.K_m:
             from game.scenes.world_map import WorldMapScene
@@ -89,6 +103,9 @@ class HomeBaseScene(Scene):
             COLOR_TEXT,
         )
         surface.blit(hud, (10, 8))
+
+        if self.status_open:
+            self.status_menu.draw(surface, STATE)
 
 
 def _home_layout(width: int, height: int) -> list[list[int]]:

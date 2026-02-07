@@ -5,6 +5,7 @@ from game.constants import COLOR_BG, COLOR_TEXT
 from game.scenes.base import Scene
 from game.state import STATE
 from game.story.flags import FLAG_GOT_TEMPLE_PASS
+from game.ui.status_menu import StatusMenu
 
 
 class WorldMapScene(Scene):
@@ -14,12 +15,25 @@ class WorldMapScene(Scene):
         self.font_body = pygame.font.SysFont(None, 26)
         self.message = ""
         self.app.audio.play_music(PATHS.music / "world_map.ogg", volume=0.45)
+        self.status_menu = StatusMenu()
+        self.status_open = False
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type != pygame.KEYDOWN:
             return None
 
         self.message = ""
+
+        if event.key == pygame.K_i:
+            self.status_open = not self.status_open
+            return None
+
+        if event.key == pygame.K_ESCAPE and self.status_open:
+            self.status_open = False
+            return None
+
+        if self.status_open:
+            return None
 
         if event.key == pygame.K_ESCAPE:
             from game.scenes.title import TitleScene
@@ -83,3 +97,6 @@ class WorldMapScene(Scene):
         if self.message:
             msg = self.font_body.render(self.message, True, (220, 190, 120))
             surface.blit(msg, (40, y + 10))
+
+        if self.status_open:
+            self.status_menu.draw(surface, STATE)

@@ -5,6 +5,7 @@ from game.constants import COLOR_BG, COLOR_TEXT
 from game.items import ITEMS, get_item
 from game.scenes.base import Scene
 from game.state import STATE
+from game.ui.status_menu import StatusMenu
 
 
 class ShopScene(Scene):
@@ -16,15 +17,27 @@ class ShopScene(Scene):
         self.index = 0
         self.mode = "buy"  # buy | sell
         self.message = ""
+        self.status_menu = StatusMenu()
+        self.status_open = False
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type != pygame.KEYDOWN:
             return None
 
         if event.key == pygame.K_ESCAPE:
+            if self.status_open:
+                self.status_open = False
+                return None
             from game.scenes.town import TownScene
 
             return TownScene(self.app)
+
+        if event.key == pygame.K_i:
+            self.status_open = not self.status_open
+            return None
+
+        if self.status_open:
+            return None
 
         if event.key == pygame.K_TAB:
             self.mode = "sell" if self.mode == "buy" else "buy"
@@ -78,6 +91,9 @@ class ShopScene(Scene):
             msg = self.font.render(self.message, True, (220, 190, 120))
             surface.blit(msg, (40, 450))
 
+        if self.status_open:
+            self.status_menu.draw(surface, STATE)
+
     def _items(self) -> list[str]:
         if self.mode == "buy":
             return [item_id for item_id, item in ITEMS.items() if item.buy_price > 0]
@@ -101,4 +117,3 @@ class ShopScene(Scene):
             return
         STATE.gold += item.sell_price
         self.message = f"Sold {item.name}."
-

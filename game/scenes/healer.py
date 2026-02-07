@@ -4,6 +4,7 @@ from game.assets_manifest import PATHS
 from game.constants import COLOR_BG, COLOR_TEXT
 from game.scenes.base import Scene
 from game.state import STATE
+from game.ui.status_menu import StatusMenu
 
 
 class HealerScene(Scene):
@@ -13,15 +14,27 @@ class HealerScene(Scene):
         self.font_title = pygame.font.SysFont(None, 42)
         self.font = pygame.font.SysFont(None, 24)
         self.message = ""
+        self.status_menu = StatusMenu()
+        self.status_open = False
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type != pygame.KEYDOWN:
             return None
 
         if event.key == pygame.K_ESCAPE:
+            if self.status_open:
+                self.status_open = False
+                return None
             from game.scenes.town import TownScene
 
             return TownScene(self.app)
+
+        if event.key == pygame.K_i:
+            self.status_open = not self.status_open
+            return None
+
+        if self.status_open:
+            return None
 
         if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e):
             cost = 10
@@ -60,3 +73,5 @@ class HealerScene(Scene):
             msg = self.font.render(self.message, True, (220, 190, 120))
             surface.blit(msg, (40, 450))
 
+        if self.status_open:
+            self.status_menu.draw(surface, STATE)

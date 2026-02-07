@@ -28,6 +28,7 @@ from game.scenes.base import Scene
 from game.state import STATE
 from game.story.scripts import script_for_npc
 from game.ui.dialogue_box import DialogueBox
+from game.ui.status_menu import StatusMenu
 
 
 class TownScene(Scene):
@@ -37,7 +38,7 @@ class TownScene(Scene):
         self.app.audio.play_music(PATHS.music / "town.ogg", volume=0.45)
 
         self.grid = _town_layout(GRID_WIDTH, GRID_HEIGHT)
-        self.player = GridPlayer(5, 10)
+        self.player = GridPlayer(12, 10)
         self.player_sprite = try_load_sprite("assets/sprites/player.png", size=(TILE_SIZE, TILE_SIZE))
         self.tiles = {
             TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
@@ -49,10 +50,12 @@ class TownScene(Scene):
         }
 
         self.npcs = [
-            Npc("mayor", "Mayor", x=9, y=4),
-            Npc("archivist", "Archivist", x=12, y=11),
+            Npc("mayor", "Mayor", x=7, y=4),
+            Npc("archivist", "Archivist", x=12, y=8),
         ]
         self.dialogue = DialogueBox()
+        self.status_menu = StatusMenu()
+        self.status_open = False
         self.active_script = None
         self.active_line_index = 0
 
@@ -61,6 +64,9 @@ class TownScene(Scene):
             return None
 
         if event.key == pygame.K_ESCAPE:
+            if self.status_open:
+                self.status_open = False
+                return None
             if self.active_script is not None:
                 self.active_script = None
                 self.active_line_index = 0
@@ -68,6 +74,13 @@ class TownScene(Scene):
             from game.scenes.title import TitleScene
 
             return TitleScene(self.app)
+
+        if event.key == pygame.K_i:
+            self.status_open = not self.status_open
+            return None
+
+        if self.status_open:
+            return None
 
         if self.active_script is not None:
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e, pygame.K_SPACE):
@@ -152,6 +165,9 @@ class TownScene(Scene):
             line = self.active_script.lines[self.active_line_index]
             self.dialogue.draw(surface, speaker=self.active_script.speaker, line=line)
 
+        if self.status_open:
+            self.status_menu.draw(surface, STATE)
+
     def _try_start_dialogue(self) -> bool:
         npc = self._interactable_npc()
         if npc is None:
@@ -198,18 +214,21 @@ def _town_layout(width: int, height: int) -> list[list[int]]:
         grid[y][0] = TILE_WALL
         grid[y][width - 1] = TILE_WALL
 
-    # Buildings
-    _rect_walls(grid, x1=6, y1=3, x2=13, y2=6)  # mayor office
-    grid[6][9] = TILE_FLOOR  # entrance
+    # Mayor's office (walk-in, no scene transition)
+    _rect_walls(grid, x1=4, y1=2, x2=11, y2=6)
+    grid[6][7] = TILE_FLOOR  # entrance opening
 
-    _rect_walls(grid, x1=16, y1=3, x2=23, y2=7)  # shop
-    grid[7][19] = TILE_SHOP_DOOR
+    # Shop (door tile triggers ShopScene)
+    _rect_walls(grid, x1=14, y1=2, x2=22, y2=6)
+    grid[6][18] = TILE_SHOP_DOOR
 
-    _rect_walls(grid, x1=3, y1=9, x2=9, y2=13)  # guild
-    grid[13][6] = TILE_GUILD_DOOR
+    # Guild (door tile triggers GuildScene)
+    _rect_walls(grid, x1=3, y1=8, x2=10, y2=12)
+    grid[12][6] = TILE_GUILD_DOOR
 
-    _rect_walls(grid, x1=15, y1=9, x2=21, y2=13)  # healer
-    grid[13][18] = TILE_HEALER_DOOR
+    # Healer (door tile triggers HealerScene)
+    _rect_walls(grid, x1=14, y1=8, x2=21, y2=12)
+    grid[12][17] = TILE_HEALER_DOOR
 
     grid[height // 2][1] = TILE_DOOR
     return grid
