@@ -6,6 +6,9 @@ import pygame
 
 
 class Scene(ABC):
+    def __init__(self, app) -> None:
+        self.app = app
+
     @abstractmethod
     def handle_event(self, event: pygame.event.Event) -> "Scene | None":
         raise NotImplementedError
@@ -17,4 +20,3 @@ class Scene(ABC):
     @abstractmethod
     def draw(self, surface: pygame.Surface) -> None:
         raise NotImplementedError
-

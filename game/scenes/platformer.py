@@ -100,13 +100,14 @@ class Level:
 
 
 class PlatformerScene(Scene):
-    def __init__(self) -> None:
+    def __init__(self, app) -> None:
+        super().__init__(app)
         self.level = Level()
         self.player = Player(80, 40)
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            return TitleScene()
+            return TitleScene(self.app)
         return None
 
     def update(self, dt: float) -> Scene | None:

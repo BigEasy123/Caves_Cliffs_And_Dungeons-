@@ -1,6 +1,7 @@
 import pygame
 
 from game.assets import try_load_sprite
+from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
     COLOR_DOOR,
@@ -20,12 +21,19 @@ from game.scenes.base import Scene
 
 
 class HomeBaseScene(Scene):
-    def __init__(self) -> None:
+    def __init__(self, app) -> None:
+        super().__init__(app)
         self.font = pygame.font.SysFont(None, 22)
+        self.app.audio.play_music(PATHS.music / "home.ogg", volume=0.45)
 
         self.grid = _home_layout(GRID_WIDTH, GRID_HEIGHT)
         self.player = GridPlayer(4, 6)
         self.player_sprite = try_load_sprite("assets/sprites/player.png", size=(TILE_SIZE, TILE_SIZE))
+        self.tiles = {
+            TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_DOOR: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
+        }
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type != pygame.KEYDOWN:
@@ -34,12 +42,12 @@ class HomeBaseScene(Scene):
         if event.key == pygame.K_ESCAPE:
             from game.scenes.title import TitleScene
 
-            return TitleScene()
+            return TitleScene(self.app)
 
         if event.key == pygame.K_m:
             from game.scenes.world_map import WorldMapScene
 
-            return WorldMapScene()
+            return WorldMapScene(self.app)
 
         dx, dy = 0, 0
         if event.key in (pygame.K_LEFT, pygame.K_a):
@@ -54,7 +62,7 @@ class HomeBaseScene(Scene):
             if _is_on_or_adjacent(self.grid, self.player.x, self.player.y, TILE_DOOR):
                 from game.scenes.world_map import WorldMapScene
 
-                return WorldMapScene()
+                return WorldMapScene(self.app)
             return None
 
         if dx != 0 or dy != 0:
@@ -66,7 +74,7 @@ class HomeBaseScene(Scene):
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
-        _draw_grid(surface, self.grid)
+        _draw_grid(surface, self.grid, self.tiles)
 
         px = self.player.x * TILE_SIZE
         py = self.player.y * TILE_SIZE
@@ -98,9 +106,13 @@ def _home_layout(width: int, height: int) -> list[list[int]]:
     return grid
 
 
-def _draw_grid(surface: pygame.Surface, grid: list[list[int]]) -> None:
+def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, pygame.Surface | None]) -> None:
     for y, row in enumerate(grid):
         for x, cell in enumerate(row):
+            sprite = tiles.get(cell)
+            if sprite is not None:
+                surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
+                continue
             if cell == TILE_WALL:
                 color = COLOR_WALL
             elif cell == TILE_DOOR:

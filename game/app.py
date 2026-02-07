@@ -3,6 +3,7 @@ import sys
 import pygame
 
 from game.constants import FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TITLE
+from game.audio import Audio
 from game.scenes.base import Scene
 from game.scenes.title import TitleScene
 
@@ -14,8 +15,10 @@ class GameApp:
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
 
+        self.audio = Audio()
+
         self.running = True
-        self.scene: Scene = TitleScene()
+        self.scene: Scene = TitleScene(self)
 
     def set_scene(self, scene: Scene) -> None:
         self.scene = scene
@@ -41,4 +44,3 @@ class GameApp:
 
         pygame.quit()
         sys.exit()
-

@@ -1,17 +1,24 @@
 import pygame
 
 from game.assets import try_load_sprite
+from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
     COLOR_DOOR,
     COLOR_FLOOR,
+    COLOR_GUILD,
+    COLOR_HEALER,
     COLOR_PLAYER,
+    COLOR_SHOP,
     COLOR_TEXT,
     COLOR_WALL,
     GRID_HEIGHT,
     GRID_WIDTH,
     TILE_DOOR,
     TILE_FLOOR,
+    TILE_GUILD_DOOR,
+    TILE_HEALER_DOOR,
+    TILE_SHOP_DOOR,
     TILE_SIZE,
     TILE_WALL,
 )
@@ -24,16 +31,26 @@ from game.ui.dialogue_box import DialogueBox
 
 
 class TownScene(Scene):
-    def __init__(self) -> None:
+    def __init__(self, app) -> None:
+        super().__init__(app)
         self.font = pygame.font.SysFont(None, 22)
+        self.app.audio.play_music(PATHS.music / "town.ogg", volume=0.45)
 
         self.grid = _town_layout(GRID_WIDTH, GRID_HEIGHT)
         self.player = GridPlayer(5, 10)
         self.player_sprite = try_load_sprite("assets/sprites/player.png", size=(TILE_SIZE, TILE_SIZE))
+        self.tiles = {
+            TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_DOOR: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_SHOP_DOOR: try_load_sprite(PATHS.tiles / "shop.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_GUILD_DOOR: try_load_sprite(PATHS.tiles / "guild.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_HEALER_DOOR: try_load_sprite(PATHS.tiles / "healer.png", size=(TILE_SIZE, TILE_SIZE)),
+        }
 
         self.npcs = [
-            Npc("mayor", "Mayor", x=9, y=8),
-            Npc("archivist", "Archivist", x=18, y=12),
+            Npc("mayor", "Mayor", x=9, y=4),
+            Npc("archivist", "Archivist", x=12, y=11),
         ]
         self.dialogue = DialogueBox()
         self.active_script = None
@@ -50,7 +67,7 @@ class TownScene(Scene):
                 return None
             from game.scenes.title import TitleScene
 
-            return TitleScene()
+            return TitleScene(self.app)
 
         if self.active_script is not None:
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e, pygame.K_SPACE):
@@ -69,10 +86,28 @@ class TownScene(Scene):
         elif event.key == pygame.K_e:
             if self._try_start_dialogue():
                 return None
-            if _is_on_or_adjacent(self.grid, self.player.x, self.player.y, TILE_DOOR):
+            door_tile = _adjacent_tile(
+                self.grid,
+                self.player.x,
+                self.player.y,
+                {TILE_DOOR, TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
+            )
+            if door_tile == TILE_SHOP_DOOR:
+                from game.scenes.shop import ShopScene
+
+                return ShopScene(self.app)
+            if door_tile == TILE_GUILD_DOOR:
+                from game.scenes.guild import GuildScene
+
+                return GuildScene(self.app)
+            if door_tile == TILE_HEALER_DOOR:
+                from game.scenes.healer import HealerScene
+
+                return HealerScene(self.app)
+            if door_tile == TILE_DOOR:
                 from game.scenes.world_map import WorldMapScene
 
-                return WorldMapScene()
+                return WorldMapScene(self.app)
             return None
 
         if dx != 0 or dy != 0:
@@ -84,7 +119,7 @@ class TownScene(Scene):
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
-        _draw_grid(surface, self.grid)
+        _draw_grid(surface, self.grid, self.tiles)
 
         for npc in self.npcs:
             pygame.draw.rect(
@@ -103,6 +138,13 @@ class TownScene(Scene):
         hint = "Town: move WASD/arrows  E: talk/exit  Esc: title"
         if self._interactable_npc() is not None:
             hint = "Town: E to talk"
+        elif _adjacent_tile(
+            self.grid,
+            self.player.x,
+            self.player.y,
+            {TILE_DOOR, TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
+        ) is not None:
+            hint = "Town: E to enter"
         hud = self.font.render(hint, True, COLOR_TEXT)
         surface.blit(hud, (10, 8))
 
@@ -146,16 +188,6 @@ class TownScene(Scene):
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
 
 
-def _is_on_or_adjacent(grid: list[list[int]], x: int, y: int, tile: int) -> bool:
-    if grid[y][x] == tile:
-        return True
-    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-        nx, ny = x + dx, y + dy
-        if 0 <= ny < len(grid) and 0 <= nx < len(grid[0]) and grid[ny][nx] == tile:
-            return True
-    return False
-
-
 def _town_layout(width: int, height: int) -> list[list[int]]:
     grid = [[TILE_FLOOR for _ in range(width)] for _ in range(height)]
 
@@ -166,27 +198,59 @@ def _town_layout(width: int, height: int) -> list[list[int]]:
         grid[y][0] = TILE_WALL
         grid[y][width - 1] = TILE_WALL
 
-    for x in range(6, 14):
-        grid[6][x] = TILE_WALL
-        grid[9][x] = TILE_WALL
-    for y in range(6, 10):
-        grid[y][6] = TILE_WALL
-        grid[y][13] = TILE_WALL
+    # Buildings
+    _rect_walls(grid, x1=6, y1=3, x2=13, y2=6)  # mayor office
+    grid[6][9] = TILE_FLOOR  # entrance
 
-    # Add an entrance into the "mayor's office" so the player can reach the Mayor.
-    grid[9][9] = TILE_FLOOR
+    _rect_walls(grid, x1=16, y1=3, x2=23, y2=7)  # shop
+    grid[7][19] = TILE_SHOP_DOOR
+
+    _rect_walls(grid, x1=3, y1=9, x2=9, y2=13)  # guild
+    grid[13][6] = TILE_GUILD_DOOR
+
+    _rect_walls(grid, x1=15, y1=9, x2=21, y2=13)  # healer
+    grid[13][18] = TILE_HEALER_DOOR
 
     grid[height // 2][1] = TILE_DOOR
     return grid
 
 
-def _draw_grid(surface: pygame.Surface, grid: list[list[int]]) -> None:
+def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, pygame.Surface | None]) -> None:
     for y, row in enumerate(grid):
         for x, cell in enumerate(row):
+            sprite = tiles.get(cell)
+            if sprite is not None:
+                surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
+                continue
             if cell == TILE_WALL:
                 color = COLOR_WALL
             elif cell == TILE_DOOR:
                 color = COLOR_DOOR
+            elif cell == TILE_SHOP_DOOR:
+                color = COLOR_SHOP
+            elif cell == TILE_GUILD_DOOR:
+                color = COLOR_GUILD
+            elif cell == TILE_HEALER_DOOR:
+                color = COLOR_HEALER
             else:
                 color = COLOR_FLOOR
             pygame.draw.rect(surface, color, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+
+
+def _adjacent_tile(grid: list[list[int]], x: int, y: int, tiles: set[int]) -> int | None:
+    if grid[y][x] in tiles:
+        return grid[y][x]
+    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        nx, ny = x + dx, y + dy
+        if 0 <= ny < len(grid) and 0 <= nx < len(grid[0]) and grid[ny][nx] in tiles:
+            return grid[ny][nx]
+    return None
+
+
+def _rect_walls(grid: list[list[int]], *, x1: int, y1: int, x2: int, y2: int) -> None:
+    for x in range(x1, x2 + 1):
+        grid[y1][x] = TILE_WALL
+        grid[y2][x] = TILE_WALL
+    for y in range(y1, y2 + 1):
+        grid[y][x1] = TILE_WALL
+        grid[y][x2] = TILE_WALL
