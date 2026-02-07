@@ -32,7 +32,7 @@ class TownScene(Scene):
         self.player_sprite = try_load_sprite("assets/sprites/player.png", size=(TILE_SIZE, TILE_SIZE))
 
         self.npcs = [
-            Npc("mayor", "Mayor", x=10, y=8),
+            Npc("mayor", "Mayor", x=9, y=8),
             Npc("archivist", "Archivist", x=18, y=12),
         ]
         self.dialogue = DialogueBox()
@@ -172,6 +172,9 @@ def _town_layout(width: int, height: int) -> list[list[int]]:
     for y in range(6, 10):
         grid[y][6] = TILE_WALL
         grid[y][13] = TILE_WALL
+
+    # Add an entrance into the "mayor's office" so the player can reach the Mayor.
+    grid[9][9] = TILE_FLOOR
 
     grid[height // 2][1] = TILE_DOOR
     return grid
