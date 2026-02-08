@@ -22,6 +22,7 @@ assets/
       temple.png
       jungle.png
       exit.png
+      bed.png
   music/                (optional)
     title.ogg
     home.ogg
@@ -57,6 +58,17 @@ Currently used tracks (optional):
 
 ### Hotkeys for saves (handy when iterating)
 
-- `F5`: save to `saves/save.json`
-- `F9`: load from `saves/save.json`
+- `F5/F6/F7`: save to `saves/save1.json` / `save2.json` / `save3.json`
+- `F9/F10/F11`: load those slots
 - `F8`: reset to a fresh game state
+
+## Generating placeholders (no external tools)
+
+If you don’t want to use an art program yet, you can auto-generate a full set of placeholder
+tiles/sprites and WAV SFX:
+
+```bash
+python tools/generate_placeholders.py --overwrite
+```
+
+This writes PNGs into `assets/sprites/` and `assets/sprites/tiles/`, and WAV files into `assets/sfx/`.

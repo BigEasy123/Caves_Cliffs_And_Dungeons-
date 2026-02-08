@@ -1,0 +1,44 @@
+{
+  "potion_small": {
+    "name": "Small Potion",
+    "description": "Heals 6 HP.",
+    "type": "consumable",
+    "buy_price": 15,
+    "sell_price": 7,
+    "usable_in_dungeon": true,
+    "effects": { "heal_hp": 6 }
+  },
+  "torch": {
+    "name": "Torch",
+    "description": "A basic torch. Useful in dark places (later).",
+    "type": "utility",
+    "buy_price": 10,
+    "sell_price": 5
+  },
+  "relic_shard": {
+    "name": "Relic Shard",
+    "description": "A fragment of an old carving. Valuable to the Guild/Archivist.",
+    "type": "material",
+    "buy_price": 0,
+    "sell_price": 25
+  },
+  "whip": {
+    "name": "Leather Whip",
+    "description": "A trusty whip. +1 ATK when equipped.",
+    "type": "weapon",
+    "slot": "weapon",
+    "buy_price": 45,
+    "sell_price": 20,
+    "stats": { "attack": 1 }
+  },
+  "jacket": {
+    "name": "Field Jacket",
+    "description": "Rugged jacket. +1 DEF when equipped.",
+    "type": "armor",
+    "slot": "armor",
+    "buy_price": 40,
+    "sell_price": 18,
+    "stats": { "defense": 1 }
+  }
+}
+

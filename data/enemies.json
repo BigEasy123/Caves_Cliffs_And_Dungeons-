@@ -1,0 +1,61 @@
+{
+  "raider": {
+    "name": "Ruins Raider",
+    "base_hp": 7,
+    "hp_per_floor": 2,
+    "attack": 3,
+    "defense": 0,
+    "aggro_range": 5,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "melee"
+  },
+  "bat": {
+    "name": "Cave Bat",
+    "base_hp": 4,
+    "hp_per_floor": 1,
+    "attack": 2,
+    "defense": 0,
+    "aggro_range": 3,
+    "move_interval": 1,
+    "attack_interval": 2,
+    "behavior": "melee"
+  },
+  "guardian": {
+    "name": "Stone Guardian",
+    "base_hp": 12,
+    "hp_per_floor": 3,
+    "attack": 4,
+    "defense": 1,
+    "aggro_range": 6,
+    "move_interval": 3,
+    "attack_interval": 2,
+    "behavior": "melee_patrol"
+  },
+  "archer": {
+    "name": "Rogue Archer",
+    "base_hp": 6,
+    "hp_per_floor": 2,
+    "attack": 3,
+    "defense": 0,
+    "aggro_range": 7,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "ranged",
+    "ranged_range": 4
+  },
+  "snake": {
+    "name": "Jungle Snake",
+    "base_hp": 5,
+    "hp_per_floor": 2,
+    "attack": 2,
+    "defense": 0,
+    "aggro_range": 5,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "poison_melee",
+    "poison_turns": 3,
+    "poison_damage": 1
+  }
+}
+

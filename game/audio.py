@@ -16,6 +16,7 @@ class Audio:
             self.enabled = False
 
         self._current_music: Path | None = None
+        self._sfx_cache: dict[Path, pygame.mixer.Sound] = {}
 
     def play_music(self, path: str | Path, *, volume: float = 0.5, loop: bool = True) -> None:
         if not self.enabled:
@@ -42,3 +43,18 @@ class Audio:
             pass
         self._current_music = None
 
+    def play_sfx(self, path: str | Path, *, volume: float = 0.6) -> None:
+        if not self.enabled:
+            return
+        p = Path(path)
+        if not p.exists():
+            return
+        try:
+            snd = self._sfx_cache.get(p)
+            if snd is None:
+                snd = pygame.mixer.Sound(str(p))
+                self._sfx_cache[p] = snd
+            snd.set_volume(max(0.0, min(1.0, volume)))
+            snd.play()
+        except Exception:
+            pass

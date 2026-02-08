@@ -5,18 +5,21 @@ from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
     COLOR_DOOR,
+    COLOR_BED,
     COLOR_FLOOR,
     COLOR_PLAYER,
     COLOR_TEXT,
     COLOR_WALL,
     GRID_HEIGHT,
     GRID_WIDTH,
+    TILE_BED,
     TILE_DOOR,
     TILE_FLOOR,
     TILE_SIZE,
     TILE_WALL,
 )
 from game.entities.player import GridPlayer
+from game.save import save_slot
 from game.scenes.base import Scene
 from game.state import STATE
 from game.ui.status_menu import StatusMenu
@@ -37,7 +40,9 @@ class HomeBaseScene(Scene):
             TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_DOOR: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_BED: try_load_sprite(PATHS.tiles / "bed.png", size=(TILE_SIZE, TILE_SIZE)),
         }
+        self._last_pos = (self.player.x, self.player.y)
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type != pygame.KEYDOWN:
@@ -58,6 +63,11 @@ class HomeBaseScene(Scene):
         if self.status_open:
             return None
 
+        if event.key == pygame.K_b:
+            from game.scenes.inventory import InventoryScene
+
+            return InventoryScene(self.app, return_scene=self)
+
         dx, dy = 0, 0
         if event.key in (pygame.K_LEFT, pygame.K_a):
             dx = -1
@@ -69,11 +79,19 @@ class HomeBaseScene(Scene):
             dy = 1
 
         if dx != 0 or dy != 0:
+            prev = (self.player.x, self.player.y)
             self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
-            if self.grid[self.player.y][self.player.x] == TILE_DOOR:
-                from game.scenes.town import TownScene
+            if (self.player.x, self.player.y) != prev:
+                tile = self.grid[self.player.y][self.player.x]
+                if tile == TILE_DOOR:
+                    from game.scenes.town import TownScene
 
-                return TownScene(self.app, spawn=(2, GRID_HEIGHT // 2))
+                    return TownScene(self.app, spawn=(2, GRID_HEIGHT // 2))
+                if tile == TILE_BED:
+                    save_slot(1)
+                    self.app.toast("Saved at bed (slot 1)")
+                    self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
+            self._last_pos = (self.player.x, self.player.y)
         return None
 
     def update(self, dt: float) -> Scene | None:
@@ -91,7 +109,7 @@ class HomeBaseScene(Scene):
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
         hud = self.font.render(
-            "Home Base: move WASD/arrows  Walk onto door to exit  I: status  Esc: title",
+            "Home Base: move WASD/arrows  Walk onto door to exit  Walk onto bed to save  I: status  B: inventory  Esc: title",
             True,
             COLOR_TEXT,
         )
@@ -113,6 +131,11 @@ def _home_layout(width: int, height: int) -> list[list[int]]:
     door_x = ox + room_w - 1
     door_y = oy + room_h // 2
     grid[door_y][door_x] = TILE_DOOR
+
+    # Bed (save point)
+    bed_x = ox + 2
+    bed_y = oy + 2
+    grid[bed_y][bed_x] = TILE_BED
     return grid
 
 
@@ -127,6 +150,8 @@ def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, 
                 color = COLOR_WALL
             elif cell == TILE_DOOR:
                 color = COLOR_DOOR
+            elif cell == TILE_BED:
+                color = COLOR_BED
             else:
                 color = COLOR_FLOOR
             pygame.draw.rect(surface, color, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))

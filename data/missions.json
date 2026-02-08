@@ -1,0 +1,38 @@
+{
+  "relic_shard": {
+    "name": "A Shard of Truth",
+    "description": "Find a Relic Shard in the Temple Ruins.",
+    "accept_lines": [
+      "We need proof the ruins have re-opened.",
+      "Bring back a Relic Shard from the Temple Ruins and we'll pay you for the risk."
+    ],
+    "turn_in_lines": [
+      "A Relic Shard... the markings are real.",
+      "Good work. This will help the Archivist decode the murals."
+    ],
+    "reward_gold": 60,
+    "reward_items": { "potion_small": 1 },
+    "consume_items": { "relic_shard": 1 },
+    "objectives": [
+      { "type": "collect_item", "item_id": "relic_shard", "count": 1 }
+    ]
+  },
+  "reach_floor_3": {
+    "name": "Deeper Echoes",
+    "description": "Reach Floor 3 of the Temple Ruins.",
+    "accept_lines": [
+      "The surface chambers are picked clean.",
+      "Go deeper—reach Floor 3—and report what you find."
+    ],
+    "turn_in_lines": [
+      "So the tremors continue even at Floor 3...",
+      "Here. You'll need supplies if you're going back down."
+    ],
+    "reward_gold": 40,
+    "reward_items": { "torch": 1 },
+    "objectives": [
+      { "type": "reach_floor", "dungeon_id": "temple_ruins", "floor": 3 }
+    ]
+  }
+}
+

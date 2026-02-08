@@ -47,6 +47,9 @@ class HealerScene(Scene):
             STATE.gold -= cost
             STATE.hp = STATE.max_hp
             self.message = "All patched up."
+            from game.assets_manifest import PATHS
+
+            self.app.audio.play_sfx(PATHS.sfx / "heal.wav", volume=0.4)
         return None
 
     def update(self, dt: float) -> Scene | None:

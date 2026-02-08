@@ -22,3 +22,6 @@ Thumbs.db
 
 # Local saves
 saves/
+
+# Local override data
+data.local.json

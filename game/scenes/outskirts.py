@@ -24,6 +24,7 @@ from game.state import STATE
 from game.story.flags import FLAG_GOT_TEMPLE_PASS
 from game.ui.status_menu import StatusMenu
 from game.world.dungeon_run import DungeonRun
+from game.save import save_slot
 
 
 class OutskirtsScene(Scene):
@@ -71,6 +72,11 @@ class OutskirtsScene(Scene):
         if self.status_open:
             return None
 
+        if event.key == pygame.K_b:
+            from game.scenes.inventory import InventoryScene
+
+            return InventoryScene(self.app, return_scene=self)
+
         if self.dungeon_menu_open:
             return self._handle_dungeon_menu_keys(event)
 
@@ -104,7 +110,11 @@ class OutskirtsScene(Scene):
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
-        hud = self.font.render("Outskirts: move WASD/arrows  Walk onto gate/exit  I: status  Esc: title", True, COLOR_TEXT)
+        hud = self.font.render(
+            "Outskirts: move WASD/arrows  Walk onto gate/exit  I: status  B: inventory  Esc: title",
+            True,
+            COLOR_TEXT,
+        )
         surface.blit(hud, (10, 8))
 
         if self.message:
@@ -174,6 +184,8 @@ class OutskirtsScene(Scene):
 
             run = DungeonRun(dungeon_id=opt["dungeon_id"], dungeon_name=opt["name"], max_floor=opt["max_floor"])
             self.dungeon_menu_open = False
+            save_slot(1)
+            self.app.toast("Autosaved (slot 1)")
             return DungeonScene(self.app, run, return_to="outskirts")
         return None
 

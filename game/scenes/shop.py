@@ -107,6 +107,9 @@ class ShopScene(Scene):
         STATE.gold -= item.buy_price
         STATE.add_item(item_id, 1)
         self.message = f"Bought {item.name}."
+        from game.assets_manifest import PATHS
+
+        self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
 
     def _sell(self, item_id: str) -> None:
         item = get_item(item_id)
@@ -117,3 +120,6 @@ class ShopScene(Scene):
             return
         STATE.gold += item.sell_price
         self.message = f"Sold {item.name}."
+        from game.assets_manifest import PATHS
+
+        self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)

@@ -26,6 +26,14 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                 ],
                 on_finish=lambda s: (s.set(FLAG_MET_MAYOR), s.set(FLAG_GOT_TEMPLE_PASS)),
             )
+        if "reach_floor_3" in state.completed_missions and "reach_floor_3" not in state.claimed_missions:
+            return DialogueScript(
+                speaker="Mayor",
+                lines=[
+                    "Floor 3? Then the stories are true...",
+                    "Check in at the Guild. They'll want a report—and you deserve your pay.",
+                ],
+            )
         return DialogueScript(
             speaker="Mayor",
             lines=[
@@ -43,6 +51,14 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                     "Watch for a chamber with four pillars—each points to a cardinal wind.",
                 ],
             )
+        if "relic_shard" in state.completed_missions and "relic_shard" not in state.claimed_missions:
+            return DialogueScript(
+                speaker="Archivist",
+                lines=[
+                    "You found a shard? Don't lose it.",
+                    "The Guild can catalog it properly—and pay you for it.",
+                ],
+            )
         return DialogueScript(
             speaker="Archivist",
             lines=[
@@ -52,4 +68,3 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
         )
 
     return None
-

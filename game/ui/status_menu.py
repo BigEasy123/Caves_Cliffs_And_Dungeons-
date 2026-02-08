@@ -5,6 +5,7 @@ import pygame
 from game.constants import COLOR_TEXT
 from game.items import ITEMS, get_item
 from game.state import GameState
+from game.story.quest_manager import mission_objective_text
 
 
 class StatusMenu:
@@ -29,8 +30,10 @@ class StatusMenu:
 
         lines = [
             f"HP: {state.hp}/{state.max_hp}",
+            f"ATK: {state.attack()}  DEF: {state.defense()}",
             f"Gold: {state.gold}",
             f"Active mission: {state.active_mission or 'None'}",
+            (f"Objective: {mission_objective_text(state.active_mission)}" if state.active_mission else "Objective: -"),
             f"Completed missions: {len(state.completed_missions)}",
         ]
         for line in lines:
@@ -62,4 +65,3 @@ def _sorted_inventory(state: GameState) -> list[tuple[str, int]]:
     pairs = [(item_id, count) for item_id, count in state.inventory.items() if count > 0]
     pairs.sort(key=lambda p: get_item(p[0]).name if p[0] in ITEMS else p[0])
     return pairs
-

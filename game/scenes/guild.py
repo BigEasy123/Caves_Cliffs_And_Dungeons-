@@ -152,5 +152,8 @@ class GuildScene(Scene):
         if ok:
             mission = MISSIONS[mission_id]
             self.message = f"Rewards: +{mission.reward_gold}g"
+            from game.assets_manifest import PATHS
+
+            self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
         else:
             self.message = "You don't have the required items."

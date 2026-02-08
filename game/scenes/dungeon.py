@@ -31,8 +31,10 @@ from game.items import ITEMS, get_item
 from game.scenes.base import Scene
 from game.state import STATE
 from game.story.missions import MISSIONS
+from game.story.quest_manager import is_mission_complete, mission_objective_text
 from game.world.dungeon_gen import generate_dungeon
 from game.world.dungeon_run import DungeonRun
+from game.save import save_slot
 
 
 class DungeonScene(Scene):
@@ -66,6 +68,14 @@ class DungeonScene(Scene):
         self.inventory_index = 0
         self.pending_scene: Scene | None = None
         self.turn = 0
+        self.minimap_open = True
+        self.seen = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
+        self.kills = 0
+        self.gold_gained = 0
+        self.items_gained: dict[str, int] = {}
+        self.skills_open = False
+        self.skill_index = 0
+        self._reveal()
 
     def _generate_floor(self) -> list[list[int]]:
         self.rng = random.Random(self.run.seed_for_floor(self.run.floor))
@@ -142,8 +152,19 @@ class DungeonScene(Scene):
                 self.message = ""
                 return None
 
+            if event.key == pygame.K_m:
+                self.minimap_open = not self.minimap_open
+                return None
+
+            if event.key == pygame.K_k:
+                self.skills_open = not self.skills_open
+                self.message = ""
+                return None
+
             if self.inventory_open:
                 return self._handle_inventory_keys(event)
+            if self.skills_open:
+                return self._handle_skill_keys(event)
 
             dx, dy = 0, 0
             if event.key in (pygame.K_LEFT, pygame.K_a):
@@ -158,17 +179,21 @@ class DungeonScene(Scene):
                 self.grid = self._generate_floor()
                 self.player = self._spawn_player()
                 self._populate_floor()
+                self.seen = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
+                self._reveal()
                 return None
             elif event.key == pygame.K_e:
                 next_scene = self._try_use_stairs()
                 if next_scene is None:
                     self._enemy_turn()
+                    self._reveal()
                 return next_scene
 
             if dx != 0 or dy != 0:
                 acted = self._try_player_step(dx, dy)
                 if acted:
                     self._enemy_turn()
+                    self._reveal()
 
         return None
 
@@ -182,6 +207,13 @@ class DungeonScene(Scene):
 
         for y, row in enumerate(self.grid):
             for x, cell in enumerate(row):
+                if not self.seen[y][x]:
+                    pygame.draw.rect(
+                        surface,
+                        (8, 9, 12),
+                        pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE),
+                    )
+                    continue
                 sprite = self.tiles.get(cell)
                 if sprite is not None:
                     surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
@@ -201,6 +233,8 @@ class DungeonScene(Scene):
                 )
 
         for pickup in self.pickups:
+            if not self.seen[pickup.y][pickup.x]:
+                continue
             pygame.draw.rect(
                 surface,
                 COLOR_PICKUP,
@@ -210,12 +244,16 @@ class DungeonScene(Scene):
         for enemy in self.enemies:
             if not enemy.is_alive():
                 continue
+            if not self.seen[enemy.y][enemy.x]:
+                continue
             ex = enemy.x * TILE_SIZE
             ey = enemy.y * TILE_SIZE
             if self.enemy_sprite is not None:
                 surface.blit(self.enemy_sprite, (ex, ey))
             else:
                 pygame.draw.rect(surface, COLOR_ENEMY, pygame.Rect(ex, ey, TILE_SIZE, TILE_SIZE))
+            if enemy.aggro_turns > 0:
+                pygame.draw.circle(surface, (255, 255, 255), (ex + TILE_SIZE // 2, ey + 6), 4)
 
         px = self.player.x * TILE_SIZE
         py = self.player.y * TILE_SIZE
@@ -227,7 +265,7 @@ class DungeonScene(Scene):
         hud = self.font.render(
             f"{self.run.dungeon_name} - Floor {self.run.floor}/{self.run.max_floor} | "
             f"HP {STATE.hp}/{STATE.max_hp}  Gold {STATE.gold} | "
-            "Move: WASD/arrows  E: stairs  I: inventory  R: regen  Esc: map",
+            "Move: WASD/arrows  E: stairs  I: inventory  M: map  R: regen",
             True,
             COLOR_TEXT,
         )
@@ -244,13 +282,20 @@ class DungeonScene(Scene):
 
         if self.inventory_open:
             self._draw_inventory(surface)
+        if self.minimap_open:
+            self._draw_minimap(surface)
+        if self.skills_open:
+            self._draw_skills(surface)
 
     def _try_use_stairs(self) -> Scene | None:
         tile = self.grid[self.player.y][self.player.x]
 
         if tile == TILE_DUNGEON_EXIT:
             self.message = "You escape the dungeon!"
-            return self._return_scene()
+            save_slot(1)
+            self.app.toast("Autosaved (slot 1)")
+            self.app.audio.play_sfx(PATHS.sfx / "door.wav", volume=0.45)
+            return self._summary_scene(reason="Reached the bottom")
 
         if tile == TILE_STAIRS_DOWN:
             if self.run.floor >= self.run.max_floor:
@@ -261,6 +306,8 @@ class DungeonScene(Scene):
             pos = _find_tile(self.grid, TILE_STAIRS_UP)
             self.player = GridPlayer(*(pos if pos is not None else (1, 1)))
             self._populate_floor()
+            self.seen = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
+            self._reveal()
             if self._check_missions_progress():
                 return self.pending_scene
             self.message = ""
@@ -275,6 +322,8 @@ class DungeonScene(Scene):
             pos = _find_tile(self.grid, TILE_STAIRS_DOWN) or _find_tile(self.grid, TILE_FLOOR)
             self.player = GridPlayer(*(pos if pos is not None else (1, 1)))
             self._populate_floor()
+            self.seen = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
+            self._reveal()
             self.message = ""
             return None
 
@@ -303,21 +352,48 @@ class DungeonScene(Scene):
         if STATE.hp <= 0:
             return
 
+        if STATE.poison_turns > 0:
+            STATE.hp = max(0, STATE.hp - STATE.poison_damage)
+            STATE.poison_turns -= 1
+            if STATE.hp <= 0:
+                self.message = "Poison drops you... (Returned to Home Base)"
+                self._handle_player_death()
+                return
+
         self.turn += 1
         for enemy in self.enemies:
             if not enemy.is_alive():
                 continue
+
+            if enemy.stunned_turns > 0:
+                enemy.stunned_turns -= 1
+                continue
+
             self._update_aggro(enemy)
             if enemy.aggro_turns <= 0:
                 # Idle wander sometimes
-                if enemy.should_move(self.turn) and self.rng.random() < 0.35:
+                if enemy.behavior.endswith("patrol") and enemy.should_move(self.turn):
+                    self._enemy_patrol(enemy)
+                elif enemy.should_move(self.turn) and self.rng.random() < 0.35:
                     self._enemy_wander(enemy)
                 continue
 
+            if enemy.behavior == "ranged":
+                if self._enemy_try_ranged(enemy):
+                    continue
+
             if abs(enemy.x - self.player.x) + abs(enemy.y - self.player.y) == 1 and enemy.should_attack(self.turn):
-                damage = max(1, enemy.attack)
+                damage = max(1, enemy.attack - STATE.defense())
+                if STATE.guard_turns > 0:
+                    damage = max(1, damage // 2)
+                    STATE.guard_turns = max(0, STATE.guard_turns - 1)
                 STATE.hp = max(0, STATE.hp - damage)
                 self.message = f"{enemy.name} hits you for {damage}."
+                self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.5)
+                if enemy.behavior == "poison_melee" and enemy.poison_turns > 0:
+                    STATE.poison_turns = max(STATE.poison_turns, enemy.poison_turns)
+                    STATE.poison_damage = max(STATE.poison_damage, enemy.poison_damage)
+                    self.message += " You feel poison spreading."
                 if STATE.hp <= 0:
                     self.message = "You collapse... (Returned to Home Base)"
                     self._handle_player_death()
@@ -361,24 +437,40 @@ class DungeonScene(Scene):
             enemy.x, enemy.y = nx, ny
             break
 
+    def _enemy_patrol(self, enemy: Enemy) -> None:
+        nx = enemy.x + enemy.patrol_dx
+        ny = enemy.y
+        if self.grid[ny][nx] == TILE_WALL or self._enemy_at(nx, ny) is not None or (nx, ny) == (self.player.x, self.player.y):
+            enemy.patrol_dx *= -1
+            return
+        enemy.x = nx
+
     def _player_attack(self, enemy: Enemy) -> None:
-        damage = max(1, 4 - getattr(enemy, "defense", 0))
+        damage = max(1, STATE.attack() - getattr(enemy, "defense", 0))
         enemy.hp = max(0, enemy.hp - damage)
         if enemy.hp <= 0:
             self.message = f"You defeat {enemy.name}!"
-            STATE.gold += 5 + self.run.floor
+            self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.55)
+            gained = 5 + self.run.floor
+            STATE.gold += gained
+            self.gold_gained += gained
+            self.kills += 1
             if self.rng.random() < 0.25:
                 STATE.add_item("potion_small", 1)
+                self.items_gained["potion_small"] = self.items_gained.get("potion_small", 0) + 1
                 self.message += " Found a Small Potion."
         else:
             self.message = f"You hit {enemy.name} for {damage}."
+            self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.55)
 
     def _pickup_if_present(self) -> None:
         for idx, pickup in enumerate(list(self.pickups)):
             if pickup.x == self.player.x and pickup.y == self.player.y:
                 STATE.add_item(pickup.item_id, pickup.amount)
+                self.items_gained[pickup.item_id] = self.items_gained.get(pickup.item_id, 0) + pickup.amount
                 item = get_item(pickup.item_id)
                 self.message = f"Picked up {item.name}."
+                self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
                 self.pickups.pop(idx)
                 if pickup.item_id == "relic_shard":
                     self._check_missions_progress()
@@ -420,6 +512,131 @@ class DungeonScene(Scene):
 
         self.pending_scene = HomeBaseScene(self.app)
 
+    def _handle_skill_keys(self, event: pygame.event.Event) -> Scene | None:
+        if event.key in (pygame.K_ESCAPE, pygame.K_k):
+            self.skills_open = False
+            return None
+        skills = self._skills()
+        if not skills:
+            return None
+        if event.key in (pygame.K_UP, pygame.K_w):
+            self.skill_index = (self.skill_index - 1) % len(skills)
+        elif event.key in (pygame.K_DOWN, pygame.K_s):
+            self.skill_index = (self.skill_index + 1) % len(skills)
+        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e):
+            self._use_skill(skills[self.skill_index])
+            self.skills_open = False
+            self._enemy_turn()
+            self._reveal()
+        return None
+
+    def _skills(self) -> list[str]:
+        return ["whip", "throw_rock", "guard"]
+
+    def _use_skill(self, skill_id: str) -> None:
+        if skill_id == "guard":
+            STATE.guard_turns = 1
+            self.message = "You brace yourself."
+            self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
+            return
+        if skill_id == "throw_rock":
+            target = self._nearest_enemy_in_range(4)
+            if target is None:
+                self.message = "No target in range."
+                return
+            damage = max(1, STATE.attack() - 1)
+            target.hp = max(0, target.hp - damage)
+            self.message = f"You throw a rock at {target.name} ({damage})."
+            self.app.audio.play_sfx(PATHS.sfx / "shoot.wav", volume=0.4)
+            if target.hp <= 0:
+                self.kills += 1
+                gained = 4 + self.run.floor
+                STATE.gold += gained
+                self.gold_gained += gained
+                self.message += " Defeated!"
+            return
+        if skill_id == "whip":
+            target = self._enemy_at_adjacent()
+            if target is None:
+                self.message = "No adjacent target."
+                return
+            damage = max(1, STATE.attack() + 2 - target.defense)
+            target.hp = max(0, target.hp - damage)
+            if self.rng.random() < 0.25:
+                target.stunned_turns = max(target.stunned_turns, 1)
+            self.message = f"You crack the whip at {target.name} ({damage})."
+            self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.55)
+            if target.hp <= 0:
+                self.kills += 1
+                gained = 5 + self.run.floor
+                STATE.gold += gained
+                self.gold_gained += gained
+                self.message += " Defeated!"
+            return
+
+    def _enemy_at_adjacent(self) -> Enemy | None:
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            e = self._enemy_at(self.player.x + dx, self.player.y + dy)
+            if e is not None:
+                return e
+        return None
+
+    def _nearest_enemy_in_range(self, r: int) -> Enemy | None:
+        best = None
+        best_d = 999
+        for e in self.enemies:
+            if not e.is_alive():
+                continue
+            if not self.seen[e.y][e.x]:
+                continue
+            d = abs(e.x - self.player.x) + abs(e.y - self.player.y)
+            if d <= r and d < best_d and self._has_simple_los(self.player.x, self.player.y, e.x, e.y):
+                best = e
+                best_d = d
+        return best
+
+    def _enemy_try_ranged(self, enemy: Enemy) -> bool:
+        if not enemy.should_attack(self.turn):
+            return False
+        d = abs(enemy.x - self.player.x) + abs(enemy.y - self.player.y)
+        if enemy.ranged_range <= 0 or d > enemy.ranged_range:
+            return False
+        if not self._has_simple_los(enemy.x, enemy.y, self.player.x, self.player.y):
+            return False
+        damage = max(1, enemy.attack - STATE.defense())
+        if STATE.guard_turns > 0:
+            damage = max(1, damage // 2)
+            STATE.guard_turns = max(0, STATE.guard_turns - 1)
+        STATE.hp = max(0, STATE.hp - damage)
+        self.message = f"{enemy.name} shoots you for {damage}."
+        self.app.audio.play_sfx(PATHS.sfx / "shoot.wav", volume=0.45)
+        if STATE.hp <= 0:
+            self.message = "You collapse... (Returned to Home Base)"
+            self._handle_player_death()
+        return True
+
+    def _draw_skills(self, surface: pygame.Surface) -> None:
+        width, height = surface.get_size()
+        rect = pygame.Rect(60, 90, width - 120, height - 180)
+        overlay = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 210))
+        surface.blit(overlay, rect.topleft)
+        pygame.draw.rect(surface, (255, 255, 255), rect, 2)
+        title = self.font.render("Skills (Up/Down, Enter/E, K/Esc)", True, COLOR_TEXT)
+        surface.blit(title, (rect.left + 12, rect.top + 12))
+        skills = self._skills()
+        y = rect.top + 46
+        labels = {
+            "whip": "Whip (melee, high damage, may stun)",
+            "throw_rock": "Throw Rock (ranged, nearest target)",
+            "guard": "Guard (halve next hit)",
+        }
+        for idx, skill_id in enumerate(skills):
+            prefix = "> " if idx == self.skill_index else "  "
+            line = self.font.render(prefix + labels.get(skill_id, skill_id), True, COLOR_TEXT)
+            surface.blit(line, (rect.left + 12, y))
+            y += 26
+
     def _handle_inventory_keys(self, event: pygame.event.Event) -> Scene | None:
         if event.key in (pygame.K_ESCAPE, pygame.K_i):
             self.inventory_open = False
@@ -460,21 +677,16 @@ class DungeonScene(Scene):
         self.message = f"Used {item.name}."
 
     def _check_missions_progress(self) -> bool:
-        completed = False
-        if STATE.active_mission == "relic_shard" and STATE.item_count("relic_shard") > 0:
-            STATE.completed_missions.add("relic_shard")
-            STATE.active_mission = None
-            self.message = "Mission complete: Found a Relic Shard! Return to the Guild."
-            completed = True
-        if STATE.active_mission == "reach_floor_3" and self.run.dungeon_id == "temple_ruins" and self.run.floor >= 3:
-            STATE.completed_missions.add("reach_floor_3")
-            STATE.active_mission = None
-            self.message = "Mission complete: Reached Floor 3! Return to the Guild."
-            completed = True
-
-        if completed:
-            self.pending_scene = self._return_scene()
-        return completed
+        mission_id = STATE.active_mission
+        if not mission_id:
+            return False
+        if not is_mission_complete(STATE, mission_id, dungeon_id=self.run.dungeon_id, floor=self.run.floor):
+            return False
+        STATE.completed_missions.add(mission_id)
+        STATE.active_mission = None
+        self.message = f"Mission complete: {MISSIONS.get(mission_id).name if mission_id in MISSIONS else mission_id}! Return to the Guild."
+        self.pending_scene = self._summary_scene(reason="Mission complete")
+        return True
 
     def _mission_hud_text(self) -> str:
         mission_id = STATE.active_mission
@@ -483,7 +695,7 @@ class DungeonScene(Scene):
         mission = MISSIONS.get(mission_id)
         if mission is None:
             return f"Mission: {mission_id}"
-        return f"Mission: {mission.name} — {mission.description}"
+        return f"Mission: {mission.name} — {mission_objective_text(mission_id)}"
 
     def _return_scene(self) -> Scene:
         if self.return_to == "outskirts":
@@ -493,6 +705,60 @@ class DungeonScene(Scene):
         from game.scenes.town import TownScene
 
         return TownScene(self.app, spawn=(GRID_WIDTH - 4, GRID_HEIGHT // 2))
+
+    def _summary_scene(self, *, reason: str) -> Scene:
+        from game.scenes.run_summary import RunSummaryScene
+
+        next_scene = self._return_scene()
+        lines = [
+            f"Reason: {reason}",
+            f"Turns: {self.turn}",
+            f"Enemies defeated: {self.kills}",
+            f"Gold gained: {self.gold_gained}",
+        ]
+        if self.items_gained:
+            lines.append("Items gained:")
+            for item_id, count in sorted(self.items_gained.items()):
+                lines.append(f"- {item_id} x{count}")
+        return RunSummaryScene(self.app, title="Dungeon Run Summary", lines=lines, next_scene=next_scene)
+
+    def _reveal(self) -> None:
+        r = 3
+        for yy in range(max(0, self.player.y - r), min(GRID_HEIGHT, self.player.y + r + 1)):
+            for xx in range(max(0, self.player.x - r), min(GRID_WIDTH, self.player.x + r + 1)):
+                if abs(xx - self.player.x) + abs(yy - self.player.y) <= r:
+                    self.seen[yy][xx] = True
+
+    def _draw_minimap(self, surface: pygame.Surface) -> None:
+        scale = 4
+        w = GRID_WIDTH * scale
+        h = GRID_HEIGHT * scale
+        ox = surface.get_width() - w - 10
+        oy = 45
+        bg = pygame.Surface((w + 4, h + 4), pygame.SRCALPHA)
+        bg.fill((0, 0, 0, 160))
+        surface.blit(bg, (ox - 2, oy - 2))
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
+                if not self.seen[y][x]:
+                    continue
+                cell = self.grid[y][x]
+                if cell == TILE_WALL:
+                    color = (90, 95, 110)
+                elif cell == TILE_STAIRS_DOWN:
+                    color = (120, 160, 230)
+                elif cell == TILE_STAIRS_UP:
+                    color = (170, 230, 150)
+                elif cell == TILE_DUNGEON_EXIT:
+                    color = (240, 230, 120)
+                else:
+                    color = (45, 48, 58)
+                pygame.draw.rect(surface, color, pygame.Rect(ox + x * scale, oy + y * scale, scale, scale))
+        pygame.draw.rect(
+            surface,
+            (240, 210, 80),
+            pygame.Rect(ox + self.player.x * scale, oy + self.player.y * scale, scale, scale),
+        )
 
     def _draw_inventory(self, surface: pygame.Surface) -> None:
         width, height = surface.get_size()

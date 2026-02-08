@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from game.state import GameState
+from typing import Any
 
+from game.data_loader import load_json
 
 @dataclass(frozen=True)
 class MissionDef:
@@ -15,9 +17,10 @@ class MissionDef:
     reward_gold: int = 0
     reward_items: dict[str, int] = field(default_factory=dict)
     consume_items: dict[str, int] = field(default_factory=dict)
+    objectives: list[dict[str, Any]] = field(default_factory=list)
 
 
-MISSIONS: dict[str, MissionDef] = {
+_DEFAULT_MISSIONS: dict[str, MissionDef] = {
     "relic_shard": MissionDef(
         mission_id="relic_shard",
         name="A Shard of Truth",
@@ -33,6 +36,7 @@ MISSIONS: dict[str, MissionDef] = {
         reward_gold=60,
         reward_items={"potion_small": 1},
         consume_items={"relic_shard": 1},
+        objectives=[{"type": "collect_item", "item_id": "relic_shard", "count": 1}],
     ),
     "reach_floor_3": MissionDef(
         mission_id="reach_floor_3",
@@ -48,8 +52,36 @@ MISSIONS: dict[str, MissionDef] = {
         ],
         reward_gold=40,
         reward_items={"torch": 1},
+        objectives=[{"type": "reach_floor", "dungeon_id": "temple_ruins", "floor": 3}],
     ),
 }
+
+
+def _missions_from_json(data: dict[str, Any]) -> dict[str, MissionDef]:
+    missions: dict[str, MissionDef] = {}
+    for mission_id, raw in data.items():
+        if not isinstance(raw, dict):
+            continue
+        missions[mission_id] = MissionDef(
+            mission_id=mission_id,
+            name=str(raw.get("name", mission_id)),
+            description=str(raw.get("description", "")),
+            accept_lines=list(raw.get("accept_lines", []) or []),
+            turn_in_lines=list(raw.get("turn_in_lines", []) or []),
+            reward_gold=int(raw.get("reward_gold", 0)),
+            reward_items=dict(raw.get("reward_items", {}) or {}),
+            consume_items=dict(raw.get("consume_items", {}) or {}),
+            objectives=list(raw.get("objectives", []) or []),
+        )
+    return missions
+
+
+MISSIONS: dict[str, MissionDef] = _DEFAULT_MISSIONS
+_loaded = load_json("data/missions.json")
+if isinstance(_loaded, dict):
+    parsed = _missions_from_json(_loaded)
+    if parsed:
+        MISSIONS = parsed
 
 
 def is_turn_in_available(state: GameState, mission_id: str) -> bool:

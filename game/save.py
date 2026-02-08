@@ -9,7 +9,7 @@ from game.state import GameState, STATE
 
 
 SAVE_VERSION = 1
-DEFAULT_SAVE_PATH = Path("saves/save.json")
+DEFAULT_SAVE_PATH = Path("saves/save1.json")
 
 
 def save_state(path: str | Path = DEFAULT_SAVE_PATH, state: GameState = STATE) -> None:
@@ -33,10 +33,24 @@ def reset_state(state: GameState = STATE) -> None:
     state.gold = 50
     state.max_hp = 20
     state.hp = 20
+    state.base_attack = 4
+    state.base_defense = 0
     state.inventory.clear()
+    state.equipment = {"weapon": None, "armor": None}
     state.completed_missions.clear()
     state.claimed_missions.clear()
     state.active_mission = None
+    state.guard_turns = 0
+    state.poison_turns = 0
+    state.poison_damage = 0
+
+
+def save_slot(slot: int, state: GameState = STATE) -> None:
+    save_state(Path(f"saves/save{slot}.json"), state=state)
+
+
+def load_slot(slot: int, state: GameState = STATE) -> bool:
+    return load_state(Path(f"saves/save{slot}.json"), state=state)
 
 
 def _serialize_state(state: GameState) -> dict[str, Any]:
@@ -58,7 +72,14 @@ def _apply_state(state: GameState, payload: dict[str, Any]) -> None:
     state.gold = int(data.get("gold", 50))
     state.max_hp = int(data.get("max_hp", 20))
     state.hp = int(data.get("hp", state.max_hp))
+    state.base_attack = int(data.get("base_attack", 4))
+    state.base_defense = int(data.get("base_defense", 0))
     state.inventory = {str(k): int(v) for k, v in (data.get("inventory", {}) or {}).items()}
+    equip = data.get("equipment", {}) or {}
+    state.equipment = {"weapon": equip.get("weapon", None), "armor": equip.get("armor", None)}
     state.completed_missions = set(data.get("completed_missions", []))
     state.claimed_missions = set(data.get("claimed_missions", []))
     state.active_mission = data.get("active_mission", None)
+    state.guard_turns = int(data.get("guard_turns", 0))
+    state.poison_turns = int(data.get("poison_turns", 0))
+    state.poison_damage = int(data.get("poison_damage", 0))

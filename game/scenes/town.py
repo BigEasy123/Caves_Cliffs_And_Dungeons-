@@ -88,6 +88,11 @@ class TownScene(Scene):
         if self.status_open:
             return None
 
+        if event.key == pygame.K_b:
+            from game.scenes.inventory import InventoryScene
+
+            return InventoryScene(self.app, return_scene=self)
+
         if self.active_script is not None:
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e, pygame.K_SPACE):
                 self._advance_dialogue()
@@ -105,24 +110,6 @@ class TownScene(Scene):
         elif event.key == pygame.K_e:
             if self._try_start_dialogue():
                 return None
-            door_tile = _adjacent_tile(
-                self.grid,
-                self.player.x,
-                self.player.y,
-                {TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
-            )
-            if door_tile == TILE_SHOP_DOOR:
-                from game.scenes.shop import ShopScene
-
-                return ShopScene(self.app)
-            if door_tile == TILE_GUILD_DOOR:
-                from game.scenes.guild import GuildScene
-
-                return GuildScene(self.app)
-            if door_tile == TILE_HEALER_DOOR:
-                from game.scenes.healer import HealerScene
-
-                return HealerScene(self.app)
             return None
 
         if dx != 0 or dy != 0:
@@ -152,7 +139,7 @@ class TownScene(Scene):
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
-        hint = "Town: move WASD/arrows  E: talk/enter  Walk onto exits  I: status  Esc: title"
+        hint = "Town: move WASD/arrows  E: talk/enter  Walk onto exits  I: status  B: inventory  Esc: title"
         if self._interactable_npc() is not None:
             hint = "Town: E to talk"
         elif _adjacent_tile(
@@ -207,6 +194,18 @@ class TownScene(Scene):
             return None
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
         tile = self.grid[self.player.y][self.player.x]
+        if tile == TILE_SHOP_DOOR:
+            from game.scenes.shop import ShopScene
+
+            return ShopScene(self.app)
+        if tile == TILE_GUILD_DOOR:
+            from game.scenes.guild_hall import GuildHallScene
+
+            return GuildHallScene(self.app, spawn=(GRID_WIDTH // 2, GRID_HEIGHT - 4))
+        if tile == TILE_HEALER_DOOR:
+            from game.scenes.healer import HealerScene
+
+            return HealerScene(self.app)
         if tile == TILE_EXIT_HOME:
             from game.scenes.home import HomeBaseScene
 

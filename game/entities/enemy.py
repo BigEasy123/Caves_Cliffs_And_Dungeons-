@@ -17,6 +17,12 @@ class Enemy:
     aggro_turns: int = 0
     move_interval: int = 2
     attack_interval: int = 1
+    behavior: str = "melee"
+    ranged_range: int = 0
+    poison_turns: int = 0
+    poison_damage: int = 0
+    stunned_turns: int = 0
+    patrol_dx: int = 1
     _move_phase: int = 0
     _attack_phase: int = 0
 
