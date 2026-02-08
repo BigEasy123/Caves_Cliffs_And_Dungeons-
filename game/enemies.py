@@ -123,9 +123,11 @@ if isinstance(_loaded, dict):
         ENEMIES = parsed
 
 
-def spawn_enemy(enemy_id: str, *, x: int, y: int, floor: int, rng: Random) -> Enemy:
+def spawn_enemy(enemy_id: str, *, x: int, y: int, floor: int, combat_level: int = 1, rng: Random) -> Enemy:
     d = ENEMIES[enemy_id]
-    hp = d.base_hp + d.hp_per_floor * max(0, floor - 1)
+    difficulty = max(0, int(combat_level) - 1)
+    effective_floor = floor + (difficulty // 2)
+    hp = d.base_hp + d.hp_per_floor * max(0, effective_floor - 1)
     return Enemy(
         enemy_id=d.enemy_id,
         name=d.name,
@@ -133,8 +135,8 @@ def spawn_enemy(enemy_id: str, *, x: int, y: int, floor: int, rng: Random) -> En
         y=y,
         max_hp=hp,
         hp=hp,
-        attack=d.attack + floor // 3,
-        defense=d.defense,
+        attack=d.attack + effective_floor // 3 + (difficulty // 4),
+        defense=d.defense + (difficulty // 5),
         aggro_range=d.aggro_range,
         move_interval=d.move_interval,
         attack_interval=d.attack_interval,

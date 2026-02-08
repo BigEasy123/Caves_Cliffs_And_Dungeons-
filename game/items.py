@@ -67,6 +67,16 @@ _DEFAULT_ITEMS: dict[str, ItemDef] = {
         slot="armor",
         stats={"defense": 1},
     ),
+    "lucky_charm": ItemDef(
+        item_id="lucky_charm",
+        name="Lucky Charm",
+        description="A worn charm. +2 Max HP when equipped.",
+        type="trinket",
+        buy_price=55,
+        sell_price=25,
+        slot="trinket",
+        stats={"max_hp": 2},
+    ),
 }
 
 

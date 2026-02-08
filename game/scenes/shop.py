@@ -27,6 +27,7 @@ class ShopScene(Scene):
         if event.key == pygame.K_ESCAPE:
             if self.status_open:
                 self.status_open = False
+                self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
                 return None
             from game.scenes.town import TownScene
 
@@ -34,6 +35,10 @@ class ShopScene(Scene):
 
         if event.key == pygame.K_i:
             self.status_open = not self.status_open
+            self.app.audio.play_sfx(
+                PATHS.sfx / ("ui_open.wav" if self.status_open else "ui_close.wav"),
+                volume=0.35,
+            )
             return None
 
         if self.status_open:

@@ -26,10 +26,15 @@ class WorldMapScene(Scene):
 
         if event.key == pygame.K_i:
             self.status_open = not self.status_open
+            self.app.audio.play_sfx(
+                PATHS.sfx / ("ui_open.wav" if self.status_open else "ui_close.wav"),
+                volume=0.35,
+            )
             return None
 
         if event.key == pygame.K_ESCAPE and self.status_open:
             self.status_open = False
+            self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
             return None
 
         if self.status_open:
@@ -53,6 +58,7 @@ class WorldMapScene(Scene):
         if event.key == pygame.K_3:
             if not STATE.has(FLAG_GOT_TEMPLE_PASS):
                 self.message = "Temple Ruins is locked. Talk to the Mayor in town."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
             from game.world.dungeon_run import DungeonRun
             from game.scenes.dungeon import DungeonScene

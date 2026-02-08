@@ -49,15 +49,16 @@ def _generate_pngs(*, tile_size: int, tiles_dir: Path, sprites_dir: Path, overwr
     except Exception:
         pass
 
-    def tile(path: Path, label: str, colors: Colors, icon: str, *, variant: int = 0) -> None:
+    def tile(path: Path, label: str, colors: Colors, *, texture: str, icon: str | None = None, variant: int = 0) -> None:
         if path.exists() and not overwrite:
             return
         surf = pygame.Surface((tile_size, tile_size), pygame.SRCALPHA)
         surf.fill(colors.bg)
         pygame.draw.rect(surf, colors.outline, pygame.Rect(0, 0, tile_size, tile_size), 2)
 
-        _draw_texture(surf, icon, colors, variant=variant)
-        _draw_icon(surf, icon, colors.fg)
+        _draw_texture(surf, texture, colors, variant=variant)
+        if icon is not None:
+            _draw_icon(surf, icon, colors.fg)
         if labels:
             _draw_label(surf, label, (235, 235, 240))
         pygame.image.save(surf, str(path))
@@ -75,30 +76,30 @@ def _generate_pngs(*, tile_size: int, tiles_dir: Path, sprites_dir: Path, overwr
             _draw_label(surf, label, (245, 245, 245))
         pygame.image.save(surf, str(path))
 
-    tile(tiles_dir / "floor.png", "FLOOR", Colors((35, 38, 46), (60, 66, 78)), icon="dots", variant=0)
-    tile(tiles_dir / "wall.png", "WALL", Colors((80, 90, 110), (40, 45, 60)), icon="bricks", variant=2)
-    tile(tiles_dir / "door.png", "DOOR", Colors((190, 150, 90), (90, 60, 30)), icon="door", variant=3)
-    tile(tiles_dir / "stairs_up.png", "UP", Colors((170, 230, 150), (30, 90, 40)), icon="up", variant=4)
-    tile(tiles_dir / "stairs_down.png", "DOWN", Colors((120, 160, 230), (30, 60, 120)), icon="down", variant=5)
-    tile(tiles_dir / "shop.png", "SHOP", Colors((120, 180, 240), (20, 60, 120)), icon="bag", variant=6)
-    tile(tiles_dir / "guild.png", "GUILD", Colors((240, 200, 120), (120, 80, 30)), icon="shield", variant=7)
-    tile(tiles_dir / "healer.png", "HEAL", Colors((150, 240, 160), (40, 120, 60)), icon="plus", variant=8)
-    tile(tiles_dir / "temple.png", "GATE", Colors((160, 210, 250), (30, 70, 120)), icon="temple", variant=9)
-    tile(tiles_dir / "jungle.png", "GATE", Colors((140, 240, 180), (20, 120, 70)), icon="leaf", variant=10)
-    tile(tiles_dir / "exit.png", "EXIT", Colors((240, 230, 120), (120, 90, 20)), icon="star", variant=11)
-    tile(tiles_dir / "bed_tl.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed_tl", variant=12)
-    tile(tiles_dir / "bed_tr.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed_tr", variant=13)
-    tile(tiles_dir / "bed_bl.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed_bl", variant=14)
-    tile(tiles_dir / "bed_br.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed_br", variant=15)
+    tile(tiles_dir / "floor.png", "FLOOR", Colors((35, 38, 46), (60, 66, 78)), texture="dots", icon=None, variant=0)
+    tile(tiles_dir / "wall.png", "WALL", Colors((80, 90, 110), (40, 45, 60)), texture="bricks", icon=None, variant=2)
+    tile(tiles_dir / "door.png", "DOOR", Colors((190, 150, 90), (90, 60, 30)), texture="door", icon="door", variant=3)
+    tile(tiles_dir / "stairs_up.png", "UP", Colors((170, 230, 150), (30, 90, 40)), texture="up", icon="up", variant=4)
+    tile(tiles_dir / "stairs_down.png", "DOWN", Colors((120, 160, 230), (30, 60, 120)), texture="down", icon="down", variant=5)
+    tile(tiles_dir / "shop.png", "SHOP", Colors((120, 180, 240), (20, 60, 120)), texture="bag", icon="bag", variant=6)
+    tile(tiles_dir / "guild.png", "GUILD", Colors((240, 200, 120), (120, 80, 30)), texture="shield", icon="shield", variant=7)
+    tile(tiles_dir / "healer.png", "HEAL", Colors((150, 240, 160), (40, 120, 60)), texture="plus", icon="plus", variant=8)
+    tile(tiles_dir / "temple.png", "GATE", Colors((160, 210, 250), (30, 70, 120)), texture="temple", icon="temple", variant=9)
+    tile(tiles_dir / "jungle.png", "GATE", Colors((140, 240, 180), (20, 120, 70)), texture="leaf", icon="leaf", variant=10)
+    tile(tiles_dir / "exit.png", "EXIT", Colors((240, 230, 120), (120, 90, 20)), texture="star", icon="star", variant=11)
+    tile(tiles_dir / "bed_tl.png", "BED", Colors((170, 120, 210), (80, 40, 120)), texture="bed_tl", icon="bed_tl", variant=12)
+    tile(tiles_dir / "bed_tr.png", "BED", Colors((170, 120, 210), (80, 40, 120)), texture="bed_tr", icon="bed_tr", variant=13)
+    tile(tiles_dir / "bed_bl.png", "BED", Colors((170, 120, 210), (80, 40, 120)), texture="bed_bl", icon="bed_bl", variant=14)
+    tile(tiles_dir / "bed_br.png", "BED", Colors((170, 120, 210), (80, 40, 120)), texture="bed_br", icon="bed_br", variant=15)
 
     # Variants for themed dungeons / nicer towns (no labels by default).
     for i in range(1, 4):
-        tile(tiles_dir / f"floor_stone{i}.png", f"STONE{i}", Colors((40, 44, 52), (70, 76, 88)), icon="bricks", variant=20 + i)
-        tile(tiles_dir / f"wall_rock{i}.png", f"ROCK{i}", Colors((70, 78, 96), (34, 38, 50)), icon="bricks", variant=30 + i)
-        tile(tiles_dir / f"wall_stone{i}.png", f"WSTONE{i}", Colors((85, 92, 110), (45, 50, 62)), icon="bricks", variant=60 + i)
-        tile(tiles_dir / f"floor_grass{i}.png", f"GRASS{i}", Colors((34, 62, 38), (60, 120, 70)), icon="leaf", variant=40 + i)
-        tile(tiles_dir / f"floor_gravel{i}.png", f"GRAVEL{i}", Colors((60, 56, 48), (110, 105, 95)), icon="dots", variant=50 + i)
-        tile(tiles_dir / f"floor_mud{i}.png", f"MUD{i}", Colors((78, 58, 38), (130, 95, 60)), icon="dots", variant=70 + i)
+        tile(tiles_dir / f"floor_stone{i}.png", f"STONE{i}", Colors((40, 44, 52), (70, 76, 88)), texture="bricks", icon=None, variant=20 + i)
+        tile(tiles_dir / f"wall_rock{i}.png", f"ROCK{i}", Colors((70, 78, 96), (34, 38, 50)), texture="bricks", icon=None, variant=30 + i)
+        tile(tiles_dir / f"wall_stone{i}.png", f"WSTONE{i}", Colors((85, 92, 110), (45, 50, 62)), texture="bricks", icon=None, variant=60 + i)
+        tile(tiles_dir / f"floor_grass{i}.png", f"GRASS{i}", Colors((34, 62, 38), (60, 120, 70)), texture="leaf", icon=None, variant=40 + i)
+        tile(tiles_dir / f"floor_gravel{i}.png", f"GRAVEL{i}", Colors((60, 56, 48), (110, 105, 95)), texture="dots", icon=None, variant=50 + i)
+        tile(tiles_dir / f"floor_mud{i}.png", f"MUD{i}", Colors((78, 58, 38), (130, 95, 60)), texture="dots", icon=None, variant=70 + i)
 
     sprite(sprites_dir / "player.png", "YOU", Colors((240, 210, 80), (110, 80, 20)), icon="person")
     sprite(sprites_dir / "enemy.png", "FOE", Colors((220, 90, 90), (110, 30, 30)), icon="skull")
@@ -217,6 +218,7 @@ def _draw_icon(surf, icon: str, color: tuple[int, int, int]) -> None:
 
 def _draw_texture(surf, icon: str, colors: Colors, *, variant: int) -> None:
     import pygame
+    import random
 
     w, h = surf.get_size()
 
@@ -254,19 +256,32 @@ def _draw_texture(surf, icon: str, colors: Colors, *, variant: int) -> None:
 
     # Jungle/grass: wispy blades
     if icon == "leaf":
+        rng = random.Random((variant * 1000003 + w * 31 + h * 17) & 0xFFFFFFFF)
         for y in range(2, h - 2):
             for x in range(2, w - 2):
                 n = jitter(x, y)
                 # Sparse light/dark specks
-                if n < 6:
-                    surf.set_at((x, y), shade(colors.bg, 20))
-                elif n > 252:
-                    surf.set_at((x, y), shade(colors.bg, -14))
-                # Wispy diagonal blades
-                if (x * 3 + y * 5 + variant) % 13 == 0 and n < 180:
-                    surf.set_at((x, y), shade(colors.bg, 18))
-                if (x * 5 - y * 3 + variant) % 17 == 0 and n < 140:
-                    surf.set_at((x, y), shade(colors.bg, 10))
+                if n < 10:
+                    surf.set_at((x, y), shade(colors.bg, 16))
+                elif n > 250:
+                    surf.set_at((x, y), shade(colors.bg, -12))
+
+        # Blades (thin, slightly angled lines) to make it read as "wispy grass".
+        blade_count = 26 + (variant % 9)
+        for _ in range(blade_count):
+            x0 = 2 + rng.randrange(max(1, w - 4))
+            y0 = h - 3 - rng.randrange(0, 4)
+            length = rng.randrange(max(6, h // 3), h - 4)
+            sway = rng.uniform(-0.9, 0.9)
+            x1 = int(max(2, min(w - 3, x0 + sway * (length / 2))))
+            y1 = max(2, y0 - length)
+
+            main = shade(colors.bg, rng.choice([14, 18, 22]))
+            pygame.draw.aaline(surf, main, (x0, y0), (x1, y1))
+
+            if rng.random() < 0.45:
+                hi = shade(colors.bg, 30)
+                pygame.draw.aaline(surf, hi, (x0 + 1, y0), (min(w - 3, x1 + 1), y1))
         return
 
     # Doors / special: subtle diagonal
@@ -308,6 +323,14 @@ def _generate_sfx(*, sfx_dir: Path, overwrite: bool) -> None:
     write_beep(sfx_dir / "confirm.wav", freq=660, ms=90, volume=0.30, slide=0)
     write_beep(sfx_dir / "shoot.wav", freq=520, ms=90, volume=0.30, slide=-120)
     write_beep(sfx_dir / "heal.wav", freq=740, ms=160, volume=0.30, slide=60)
+
+    # Extra UI/feedback sounds
+    write_beep(sfx_dir / "step.wav", freq=180, ms=45, volume=0.20, slide=0)
+    write_beep(sfx_dir / "ui_open.wav", freq=860, ms=120, volume=0.28, slide=120)
+    write_beep(sfx_dir / "ui_close.wav", freq=740, ms=110, volume=0.26, slide=-120)
+    write_beep(sfx_dir / "error.wav", freq=190, ms=170, volume=0.32, slide=-30)
+    write_beep(sfx_dir / "equip.wav", freq=540, ms=90, volume=0.28, slide=80)
+    write_beep(sfx_dir / "mission.wav", freq=520, ms=240, volume=0.30, slide=260)
 
 
 if __name__ == "__main__":

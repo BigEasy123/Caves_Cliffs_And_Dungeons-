@@ -5,6 +5,7 @@ import pygame
 from game.constants import COLOR_TEXT
 from game.items import ITEMS, get_item
 from game.state import GameState
+from game.story.chapters import chapter_title
 from game.story.quest_manager import mission_objective_text
 
 
@@ -29,9 +30,12 @@ class StatusMenu:
         y = rect.top + 60
 
         lines = [
-            f"HP: {state.hp}/{state.max_hp}",
+            f"HP: {state.hp}/{state.max_hp_total()}",
             f"ATK: {state.attack()}  DEF: {state.defense()}",
             f"Gold: {state.gold}",
+            f"Combat Lv: {state.combat_level}  XP: {state.combat_xp}/{state.combat_xp_to_next(state.combat_level)}",
+            f"Guild Rank: {state.guild_rank}  XP: {state.guild_xp}/{state.guild_xp_to_next(state.guild_rank)}",
+            f"Story: Chapter {state.chapter} — {chapter_title(state.chapter)}",
             f"Active mission: {state.active_mission or 'None'}",
             (f"Objective: {mission_objective_text(state.active_mission)}" if state.active_mission else "Objective: -"),
             f"Completed missions: {len(state.completed_missions)}",

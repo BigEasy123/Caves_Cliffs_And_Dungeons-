@@ -1,5 +1,6 @@
 import pygame
 
+from game.anim import DirectionalStepAnimator
 from game.assets import try_load_sprite
 from game.assets_manifest import PATHS
 from game.constants import (
@@ -34,7 +35,33 @@ class GuildHallScene(Scene):
         self.grid = _guild_layout(GRID_WIDTH, GRID_HEIGHT)
         sx, sy = spawn if spawn is not None else (GRID_WIDTH // 2, GRID_HEIGHT - 4)
         self.player = GridPlayer(sx, sy)
+        self.player_idle = {
+            "down": try_load_sprite(PATHS.sprites / "player_down.png", size=(TILE_SIZE, TILE_SIZE)),
+            "up": try_load_sprite(PATHS.sprites / "player_up.png", size=(TILE_SIZE, TILE_SIZE)),
+            "left": try_load_sprite(PATHS.sprites / "player_left.png", size=(TILE_SIZE, TILE_SIZE)),
+            "right": try_load_sprite(PATHS.sprites / "player_right.png", size=(TILE_SIZE, TILE_SIZE)),
+        }
+        self.player_walk = {
+            "down": [try_load_sprite(PATHS.sprites / f"player_walk{i}_down.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "up": [try_load_sprite(PATHS.sprites / f"player_walk{i}_up.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "left": [try_load_sprite(PATHS.sprites / f"player_walk{i}_left.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "right": [try_load_sprite(PATHS.sprites / f"player_walk{i}_right.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+        }
         self.player_sprite = try_load_sprite(PATHS.sprites / "player.png", size=(TILE_SIZE, TILE_SIZE))
+        if not any(self.player_idle.values()):
+            self.player_idle["down"] = self.player_sprite
+        try:
+            from game.direction import Direction
+
+            frames_by_dir = {
+                Direction.DOWN: [f for f in self.player_walk["down"] if f is not None],
+                Direction.UP: [f for f in self.player_walk["up"] if f is not None],
+                Direction.LEFT: [f for f in self.player_walk["left"] if f is not None],
+                Direction.RIGHT: [f for f in self.player_walk["right"] if f is not None],
+            }
+            self.player_anim = DirectionalStepAnimator(frames_by_dir)
+        except Exception:
+            self.player_anim = None
 
         self.tiles = {
             TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
@@ -68,6 +95,7 @@ class GuildHallScene(Scene):
         if event.key == pygame.K_ESCAPE:
             if self.status_open:
                 self.status_open = False
+                self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
                 return None
             if self.active_lines is not None:
                 self._close_dialogue()
@@ -78,6 +106,10 @@ class GuildHallScene(Scene):
 
         if event.key == pygame.K_i:
             self.status_open = not self.status_open
+            self.app.audio.play_sfx(
+                PATHS.sfx / ("ui_open.wav" if self.status_open else "ui_close.wav"),
+                volume=0.35,
+            )
             return None
 
         if self.status_open:
@@ -132,8 +164,19 @@ class GuildHallScene(Scene):
 
         px = self.player.x * TILE_SIZE
         py = self.player.y * TILE_SIZE
-        if self.player_sprite is not None:
-            surface.blit(self.player_sprite, (px, py))
+        fallback_by_dir = None
+        if self.player_anim is not None:
+            from game.direction import Direction
+
+            fallback_by_dir = {
+                Direction.DOWN: self.player_idle.get("down") or self.player_sprite,
+                Direction.UP: self.player_idle.get("up") or self.player_sprite,
+                Direction.LEFT: self.player_idle.get("left") or self.player_sprite,
+                Direction.RIGHT: self.player_idle.get("right") or self.player_sprite,
+            }
+        sprite = self.player_anim.current(fallback_by_dir) if self.player_anim is not None else self.player_sprite
+        if sprite is not None:
+            surface.blit(sprite, (px, py))
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
@@ -154,7 +197,12 @@ class GuildHallScene(Scene):
         ny = self.player.y + dy
         if any(n.x == nx and n.y == ny for n in self.npcs):
             return None
+        prev = (self.player.x, self.player.y)
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
+        if (self.player.x, self.player.y) != prev and self.player_anim is not None:
+            self.player_anim.on_step(dx, dy)
+        if (self.player.x, self.player.y) != prev:
+            self.app.audio.play_sfx(PATHS.sfx / "step.wav", volume=0.18)
         if self.grid[self.player.y][self.player.x] == TILE_DOOR:
             from game.scenes.town import TownScene
 

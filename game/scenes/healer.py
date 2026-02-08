@@ -24,6 +24,7 @@ class HealerScene(Scene):
         if event.key == pygame.K_ESCAPE:
             if self.status_open:
                 self.status_open = False
+                self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
                 return None
             from game.scenes.town import TownScene
 
@@ -31,6 +32,10 @@ class HealerScene(Scene):
 
         if event.key == pygame.K_i:
             self.status_open = not self.status_open
+            self.app.audio.play_sfx(
+                PATHS.sfx / ("ui_open.wav" if self.status_open else "ui_close.wav"),
+                volume=0.35,
+            )
             return None
 
         if self.status_open:
@@ -38,17 +43,17 @@ class HealerScene(Scene):
 
         if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e):
             cost = 10
-            if STATE.hp >= STATE.max_hp:
+            if STATE.hp >= STATE.max_hp_total():
                 self.message = "You're already at full health."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
             if STATE.gold < cost:
                 self.message = "Not enough gold."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
             STATE.gold -= cost
-            STATE.hp = STATE.max_hp
+            STATE.hp = STATE.max_hp_total()
             self.message = "All patched up."
-            from game.assets_manifest import PATHS
-
             self.app.audio.play_sfx(PATHS.sfx / "heal.wav", volume=0.4)
         return None
 
@@ -61,7 +66,7 @@ class HealerScene(Scene):
         surface.blit(title, (40, 50))
 
         body = [
-            f"HP: {STATE.hp}/{STATE.max_hp}",
+            f"HP: {STATE.hp}/{STATE.max_hp_total()}",
             f"Gold: {STATE.gold}",
             "Press Enter/E to heal to full for 10g.",
             "Esc to return to town.",

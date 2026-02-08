@@ -100,6 +100,7 @@ class HomeBaseScene(Scene):
         if event.key == pygame.K_ESCAPE:
             if self.status_open:
                 self.status_open = False
+                self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
                 return None
             from game.scenes.title import TitleScene
 
@@ -107,6 +108,10 @@ class HomeBaseScene(Scene):
 
         if event.key == pygame.K_i:
             self.status_open = not self.status_open
+            self.app.audio.play_sfx(
+                PATHS.sfx / ("ui_open.wav" if self.status_open else "ui_close.wav"),
+                volume=0.35,
+            )
             return None
 
         if self.status_open:
@@ -133,6 +138,7 @@ class HomeBaseScene(Scene):
             if (self.player.x, self.player.y) != prev:
                 if self.player_anim is not None:
                     self.player_anim.on_step(dx, dy)
+                self.app.audio.play_sfx(PATHS.sfx / "step.wav", volume=0.18)
                 tile = self.grid[self.player.y][self.player.x]
                 if tile == TILE_DOOR:
                     from game.scenes.town import TownScene

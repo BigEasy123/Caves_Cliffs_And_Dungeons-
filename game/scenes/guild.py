@@ -32,6 +32,7 @@ class GuildScene(Scene):
         if event.key == pygame.K_ESCAPE:
             if self.status_open:
                 self.status_open = False
+                self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
                 return None
             if self.dialogue_lines is not None:
                 self._close_dialogue()
@@ -42,6 +43,10 @@ class GuildScene(Scene):
 
         if event.key == pygame.K_i:
             self.status_open = not self.status_open
+            self.app.audio.play_sfx(
+                PATHS.sfx / ("ui_open.wav" if self.status_open else "ui_close.wav"),
+                volume=0.35,
+            )
             return None
 
         if self.status_open:
@@ -72,6 +77,8 @@ class GuildScene(Scene):
                 self.message = "Already completed."
             else:
                 STATE.active_mission = mission_id
+                # Baseline bounty counters so kill-based missions progress from acceptance.
+                STATE.mission_kill_baseline = dict(STATE.kill_log)
                 self._start_dialogue(speaker="Guild Clerk", lines=MISSIONS[mission_id].accept_lines)
         return None
 
@@ -122,8 +129,13 @@ class GuildScene(Scene):
             self.dialogue.draw(surface, speaker=self.dialogue_speaker, line=self.dialogue_lines[self.dialogue_index])
 
     def _available_missions(self) -> list[str]:
-        # Show all missions; completed-but-unclaimed remain visible as TURN IN.
-        return list(MISSIONS.keys())
+        # Show all missions up to current chapter; completed-but-unclaimed remain visible as TURN IN.
+        ids: list[str] = []
+        for mission_id, mission in MISSIONS.items():
+            if int(getattr(mission, "min_chapter", 1)) <= int(getattr(STATE, "chapter", 1)):
+                ids.append(mission_id)
+        ids.sort(key=lambda mid: (int(getattr(MISSIONS[mid], "min_chapter", 1)), MISSIONS[mid].name))
+        return ids
 
     def _start_dialogue(self, *, speaker: str, lines: list[str], on_finish=None) -> None:
         self.dialogue_speaker = speaker
@@ -148,10 +160,20 @@ class GuildScene(Scene):
         self.dialogue_index = 0
 
     def _turn_in(self, mission_id: str) -> None:
+        before_rank = STATE.guild_rank
+        before_chapter = STATE.chapter
         ok = apply_turn_in_rewards(STATE, mission_id)
         if ok:
             mission = MISSIONS[mission_id]
-            self.message = f"Rewards: +{mission.reward_gold}g"
+            xp = int(getattr(mission, "reward_guild_xp", 0))
+            parts = [f"Rewards: +{mission.reward_gold}g"]
+            if xp:
+                parts.append(f"+{xp} guild XP")
+            if STATE.guild_rank > before_rank:
+                parts.append(f"Rank up! {STATE.guild_rank}")
+            if STATE.chapter > before_chapter:
+                parts.append(f"Chapter {STATE.chapter} unlocked")
+            self.message = " | ".join(parts)
             from game.assets_manifest import PATHS
 
             self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)

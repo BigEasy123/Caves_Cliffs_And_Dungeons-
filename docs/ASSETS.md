@@ -50,7 +50,19 @@ assets/
     town.ogg
     world_map.ogg
     dungeon.ogg
-  sfx/                  (optional, not wired yet)
+  sfx/                  (optional)
+    hit.wav
+    pickup.wav
+    door.wav
+    confirm.wav
+    shoot.wav
+    heal.wav
+    step.wav
+    ui_open.wav
+    ui_close.wav
+    error.wav
+    equip.wav
+    mission.wav
 ```
 
 ### Visuals (sprites / tiles)
@@ -85,7 +97,7 @@ Currently used tracks (optional):
 
 ## Generating placeholders (no external tools)
 
-If you don’t want to use an art program yet, you can auto-generate a full set of placeholder
+If you don't want to use an art program yet, you can auto-generate a full set of placeholder
 tiles/sprites and WAV SFX:
 
 ```bash

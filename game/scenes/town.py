@@ -112,6 +112,7 @@ class TownScene(Scene):
         if event.key == pygame.K_ESCAPE:
             if self.status_open:
                 self.status_open = False
+                self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
                 return None
             if self.active_script is not None:
                 self.active_script = None
@@ -123,6 +124,10 @@ class TownScene(Scene):
 
         if event.key == pygame.K_i:
             self.status_open = not self.status_open
+            self.app.audio.play_sfx(
+                PATHS.sfx / ("ui_open.wav" if self.status_open else "ui_close.wav"),
+                volume=0.35,
+            )
             return None
 
         if self.status_open:
@@ -259,8 +264,10 @@ class TownScene(Scene):
             return None
         prev = (self.player.x, self.player.y)
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
-        if (self.player.x, self.player.y) != prev and self.player_anim is not None:
-            self.player_anim.on_step(dx, dy)
+        if (self.player.x, self.player.y) != prev:
+            if self.player_anim is not None:
+                self.player_anim.on_step(dx, dy)
+            self.app.audio.play_sfx(PATHS.sfx / "step.wav", volume=0.18)
         tile = self.grid[self.player.y][self.player.x]
         if tile == TILE_SHOP_DOOR:
             from game.scenes.shop import ShopScene

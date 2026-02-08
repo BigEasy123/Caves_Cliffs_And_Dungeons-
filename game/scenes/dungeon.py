@@ -2,7 +2,7 @@ import random
 
 import pygame
 
-from game.anim import StepAnimator
+from game.anim import DirectionalStepAnimator
 from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
@@ -55,14 +55,50 @@ class DungeonScene(Scene):
         self.grid = self._generate_floor()
         self.player = self._spawn_player()
         self._populate_floor()
-        walk_frames = [
-            try_load_sprite(PATHS.sprites / "player_walk0.png", size=(TILE_SIZE, TILE_SIZE)),
-            try_load_sprite(PATHS.sprites / "player_walk1.png", size=(TILE_SIZE, TILE_SIZE)),
-            try_load_sprite(PATHS.sprites / "player_walk2.png", size=(TILE_SIZE, TILE_SIZE)),
-        ]
-        self.player_walk = [f for f in walk_frames if f is not None]
+
+        self.player_idle = {
+            "down": try_load_sprite(PATHS.sprites / "player_down.png", size=(TILE_SIZE, TILE_SIZE)),
+            "up": try_load_sprite(PATHS.sprites / "player_up.png", size=(TILE_SIZE, TILE_SIZE)),
+            "left": try_load_sprite(PATHS.sprites / "player_left.png", size=(TILE_SIZE, TILE_SIZE)),
+            "right": try_load_sprite(PATHS.sprites / "player_right.png", size=(TILE_SIZE, TILE_SIZE)),
+        }
+        self.player_walk = {
+            "down": [try_load_sprite(PATHS.sprites / f"player_walk{i}_down.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "up": [try_load_sprite(PATHS.sprites / f"player_walk{i}_up.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "left": [try_load_sprite(PATHS.sprites / f"player_walk{i}_left.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "right": [try_load_sprite(PATHS.sprites / f"player_walk{i}_right.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+        }
+
+        # Back-compat (older single-file sprite + generic walk frames)
         self.player_sprite = try_load_sprite(PATHS.sprites / "player.png", size=(TILE_SIZE, TILE_SIZE))
-        self.player_anim = StepAnimator(self.player_walk) if self.player_walk else None
+        if not any(self.player_idle.values()):
+            self.player_idle["down"] = self.player_sprite
+
+        try:
+            from game.direction import Direction
+
+            frames_by_dir = {
+                Direction.DOWN: [f for f in self.player_walk["down"] if f is not None],
+                Direction.UP: [f for f in self.player_walk["up"] if f is not None],
+                Direction.LEFT: [f for f in self.player_walk["left"] if f is not None],
+                Direction.RIGHT: [f for f in self.player_walk["right"] if f is not None],
+            }
+            if not any(frames_by_dir.values()):
+                legacy_walk = [
+                    try_load_sprite(PATHS.sprites / "player_walk0.png", size=(TILE_SIZE, TILE_SIZE)),
+                    try_load_sprite(PATHS.sprites / "player_walk1.png", size=(TILE_SIZE, TILE_SIZE)),
+                    try_load_sprite(PATHS.sprites / "player_walk2.png", size=(TILE_SIZE, TILE_SIZE)),
+                ]
+                legacy_frames = [f for f in legacy_walk if f is not None]
+                frames_by_dir = {
+                    Direction.DOWN: legacy_frames,
+                    Direction.UP: legacy_frames,
+                    Direction.LEFT: legacy_frames,
+                    Direction.RIGHT: legacy_frames,
+                }
+            self.player_anim = DirectionalStepAnimator(frames_by_dir)
+        except Exception:
+            self.player_anim = None
         self.enemy_sprite = try_load_sprite("assets/sprites/enemy.png", size=(TILE_SIZE, TILE_SIZE))
         self.floor_stone = load_sprite_variants(PATHS.tiles, prefix="floor_stone", size=(TILE_SIZE, TILE_SIZE)) or load_sprite_variants(
             PATHS.tiles, prefix="floor", size=(TILE_SIZE, TILE_SIZE)
@@ -130,7 +166,8 @@ class DungeonScene(Scene):
         self.rng.shuffle(floor_cells)
 
         enemy_count = max(1, 2 + self.run.floor // 2)
-        table = enemy_table_for_dungeon(self.run.dungeon_id, self.run.floor)
+        difficulty_floor = self.run.floor + max(0, STATE.combat_level - 1) // 3
+        table = enemy_table_for_dungeon(self.run.dungeon_id, difficulty_floor)
         for _ in range(enemy_count):
             if not floor_cells:
                 break
@@ -140,7 +177,7 @@ class DungeonScene(Scene):
             if self.grid[y][x] in (TILE_STAIRS_DOWN, TILE_STAIRS_UP):
                 continue
             enemy_id = self.rng.choice(table)
-            self.enemies.append(spawn_enemy(enemy_id, x=x, y=y, floor=self.run.floor, rng=self.rng))
+            self.enemies.append(spawn_enemy(enemy_id, x=x, y=y, floor=self.run.floor, combat_level=STATE.combat_level, rng=self.rng))
 
         # A couple simple pickups
         for _ in range(2):
@@ -156,27 +193,66 @@ class DungeonScene(Scene):
             x, y = floor_cells.pop()
             self.pickups.append(Pickup(item_id="relic_shard", x=x, y=y))
 
+        # Mission items (rescue/collect style): ensure at least a chance to find them during a run.
+        mission_id = STATE.active_mission
+        mission = MISSIONS.get(mission_id) if mission_id else None
+        if mission is not None:
+            for obj in mission.objectives:
+                if str(obj.get("type", "")) != "collect_item":
+                    continue
+                item_id = str(obj.get("item_id", ""))
+                if not item_id or item_id == "relic_shard":
+                    continue
+                if STATE.item_count(item_id) > 0:
+                    continue
+                if not floor_cells:
+                    break
+                if self.rng.random() < 0.60:
+                    x, y = floor_cells.pop()
+                    self.pickups.append(Pickup(item_id=item_id, x=x, y=y))
+
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if self.pending_scene is not None:
             return self.pending_scene
 
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                self.message = "You can't leave mid-run. Finish the mission or reach the bottom."
-                return None
-
             if event.key == pygame.K_i:
                 self.inventory_open = not self.inventory_open
                 self.message = ""
+                self.app.audio.play_sfx(
+                    PATHS.sfx / ("ui_open.wav" if self.inventory_open else "ui_close.wav"),
+                    volume=0.35,
+                )
                 return None
 
             if event.key == pygame.K_m:
                 self.minimap_open = not self.minimap_open
+                self.app.audio.play_sfx(
+                    PATHS.sfx / ("ui_open.wav" if self.minimap_open else "ui_close.wav"),
+                    volume=0.30,
+                )
                 return None
 
             if event.key == pygame.K_k:
                 self.skills_open = not self.skills_open
                 self.message = ""
+                self.app.audio.play_sfx(
+                    PATHS.sfx / ("ui_open.wav" if self.skills_open else "ui_close.wav"),
+                    volume=0.35,
+                )
+                return None
+
+            if event.key == pygame.K_ESCAPE:
+                if self.inventory_open:
+                    self.inventory_open = False
+                    self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
+                    return None
+                if self.skills_open:
+                    self.skills_open = False
+                    self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
+                    return None
+                self.message = "You can't leave mid-run. Finish the mission or reach the bottom."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
 
             if self.inventory_open:
@@ -290,7 +366,17 @@ class DungeonScene(Scene):
 
         px = self.player.x * TILE_SIZE
         py = self.player.y * TILE_SIZE
-        sprite = self.player_anim.current(self.player_sprite) if self.player_anim is not None else self.player_sprite
+        fallback_by_dir = None
+        if self.player_anim is not None:
+            from game.direction import Direction
+
+            fallback_by_dir = {
+                Direction.DOWN: self.player_idle.get("down") or self.player_sprite,
+                Direction.UP: self.player_idle.get("up") or self.player_sprite,
+                Direction.LEFT: self.player_idle.get("left") or self.player_sprite,
+                Direction.RIGHT: self.player_idle.get("right") or self.player_sprite,
+            }
+        sprite = self.player_anim.current(fallback_by_dir) if self.player_anim is not None else self.player_sprite
         if sprite is not None:
             surface.blit(sprite, (px, py))
         else:
@@ -298,7 +384,7 @@ class DungeonScene(Scene):
 
         hud = self.font.render(
             f"{self.run.dungeon_name} - Floor {self.run.floor}/{self.run.max_floor} | "
-            f"HP {STATE.hp}/{STATE.max_hp}  Gold {STATE.gold} | "
+            f"HP {STATE.hp}/{STATE.max_hp_total()}  Gold {STATE.gold} | "
             "Move: WASD/arrows  E: stairs  I: inventory  M: map  R: regen",
             True,
             COLOR_TEXT,
@@ -334,6 +420,7 @@ class DungeonScene(Scene):
         if tile == TILE_STAIRS_DOWN:
             if self.run.floor >= self.run.max_floor:
                 self.message = "This is as deep as it goes (for now)."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
             self.run.floor += 1
             self.grid = self._generate_floor()
@@ -350,6 +437,7 @@ class DungeonScene(Scene):
         if tile == TILE_STAIRS_UP:
             if self.run.floor <= 1:
                 self.message = "No turning back now."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
             self.run.floor -= 1
             self.grid = self._generate_floor()
@@ -362,6 +450,7 @@ class DungeonScene(Scene):
             return None
 
         self.message = "No stairs here."
+        self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
         return None
 
     def _try_player_step(self, dx: int, dy: int) -> bool:
@@ -379,8 +468,10 @@ class DungeonScene(Scene):
 
         prev = (self.player.x, self.player.y)
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
-        if (self.player.x, self.player.y) != prev and self.player_anim is not None:
-            self.player_anim.on_step()
+        if (self.player.x, self.player.y) != prev:
+            if self.player_anim is not None:
+                self.player_anim.on_step(dx, dy)
+            self.app.audio.play_sfx(PATHS.sfx / "step.wav", volume=0.18)
         self._pickup_if_present()
         self.message = ""
         return True
@@ -486,6 +577,11 @@ class DungeonScene(Scene):
         damage = max(1, STATE.attack() - getattr(enemy, "defense", 0))
         enemy.hp = max(0, enemy.hp - damage)
         if enemy.hp <= 0:
+            STATE.record_kill(enemy.enemy_id)
+            levels = STATE.add_combat_xp(6 + self.run.floor)
+            if levels:
+                self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
+                self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
             self.message = f"You defeat {enemy.name}!"
             self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.55)
             gained = 5 + self.run.floor
@@ -496,6 +592,7 @@ class DungeonScene(Scene):
                 STATE.add_item("potion_small", 1)
                 self.items_gained["potion_small"] = self.items_gained.get("potion_small", 0) + 1
                 self.message += " Found a Small Potion."
+            self._check_missions_progress()
         else:
             self.message = f"You hit {enemy.name} for {damage}."
             self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.55)
@@ -544,7 +641,7 @@ class DungeonScene(Scene):
 
     def _handle_player_death(self) -> None:
         # Reset player and send them home immediately.
-        STATE.hp = STATE.max_hp
+        STATE.hp = STATE.max_hp_total()
         from game.scenes.home import HomeBaseScene
 
         self.pending_scene = HomeBaseScene(self.app)
@@ -586,11 +683,17 @@ class DungeonScene(Scene):
             self.message = f"You throw a rock at {target.name} ({damage})."
             self.app.audio.play_sfx(PATHS.sfx / "shoot.wav", volume=0.4)
             if target.hp <= 0:
+                STATE.record_kill(target.enemy_id)
+                levels = STATE.add_combat_xp(5 + self.run.floor)
+                if levels:
+                    self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
+                    self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
                 self.kills += 1
                 gained = 4 + self.run.floor
                 STATE.gold += gained
                 self.gold_gained += gained
                 self.message += " Defeated!"
+                self._check_missions_progress()
             return
         if skill_id == "whip":
             target = self._enemy_at_adjacent()
@@ -604,11 +707,17 @@ class DungeonScene(Scene):
             self.message = f"You crack the whip at {target.name} ({damage})."
             self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.55)
             if target.hp <= 0:
+                STATE.record_kill(target.enemy_id)
+                levels = STATE.add_combat_xp(6 + self.run.floor)
+                if levels:
+                    self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
+                    self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
                 self.kills += 1
                 gained = 5 + self.run.floor
                 STATE.gold += gained
                 self.gold_gained += gained
                 self.message += " Defeated!"
+                self._check_missions_progress()
             return
 
     def _enemy_at_adjacent(self) -> Enemy | None:
@@ -701,15 +810,29 @@ class DungeonScene(Scene):
         if not item.usable_in_dungeon:
             self.message = f"{item.name} can't be used here (yet)."
             return
-        if item_id == "potion_small":
-            if STATE.hp >= STATE.max_hp:
+        if item.effects and "heal_hp" in item.effects:
+            if STATE.hp >= STATE.max_hp_total():
                 self.message = "HP already full."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return
             if not STATE.remove_item(item_id, 1):
                 return
-            heal = 6
-            STATE.hp = min(STATE.max_hp, STATE.hp + heal)
+            heal = int(item.effects["heal_hp"])
+            STATE.hp = min(STATE.max_hp_total(), STATE.hp + heal)
             self.message = f"Used {item.name} (+{heal} HP)."
+            self.app.audio.play_sfx(PATHS.sfx / "heal.wav", volume=0.35)
+            return
+        if item.effects and "cure_poison" in item.effects:
+            if STATE.poison_turns <= 0:
+                self.message = "No poison to cure."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
+                return
+            if not STATE.remove_item(item_id, 1):
+                return
+            STATE.poison_turns = 0
+            STATE.poison_damage = 0
+            self.message = f"Used {item.name} (poison cured)."
+            self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
             return
         self.message = f"Used {item.name}."
 
@@ -721,7 +844,9 @@ class DungeonScene(Scene):
             return False
         STATE.completed_missions.add(mission_id)
         STATE.active_mission = None
+        STATE.mission_kill_baseline = {}
         self.message = f"Mission complete: {MISSIONS.get(mission_id).name if mission_id in MISSIONS else mission_id}! Return to the Guild."
+        self.app.audio.play_sfx(PATHS.sfx / "mission.wav", volume=0.45)
         self.pending_scene = self._summary_scene(reason="Mission complete")
         return True
 

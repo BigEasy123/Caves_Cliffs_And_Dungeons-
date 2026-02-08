@@ -8,12 +8,37 @@
     "usable_in_dungeon": true,
     "effects": { "heal_hp": 6 }
   },
+  "potion_medium": {
+    "name": "Medium Potion",
+    "description": "Heals 12 HP.",
+    "type": "consumable",
+    "buy_price": 35,
+    "sell_price": 16,
+    "usable_in_dungeon": true,
+    "effects": { "heal_hp": 12 }
+  },
+  "antidote": {
+    "name": "Antidote",
+    "description": "Cures poison.",
+    "type": "consumable",
+    "buy_price": 20,
+    "sell_price": 9,
+    "usable_in_dungeon": true,
+    "effects": { "cure_poison": 1 }
+  },
   "torch": {
     "name": "Torch",
     "description": "A basic torch. Useful in dark places (later).",
     "type": "utility",
     "buy_price": 10,
     "sell_price": 5
+  },
+  "lost_satchel": {
+    "name": "Lost Satchel",
+    "description": "A missing travel bag. Return it to the Guild.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
   },
   "relic_shard": {
     "name": "Relic Shard",
@@ -31,6 +56,24 @@
     "sell_price": 20,
     "stats": { "attack": 1 }
   },
+  "rusty_sword": {
+    "name": "Rusty Sword",
+    "description": "Seen better days. +2 ATK when equipped.",
+    "type": "weapon",
+    "slot": "weapon",
+    "buy_price": 70,
+    "sell_price": 32,
+    "stats": { "attack": 2 }
+  },
+  "machete": {
+    "name": "Jungle Machete",
+    "description": "Cuts vines and foes. +3 ATK when equipped.",
+    "type": "weapon",
+    "slot": "weapon",
+    "buy_price": 110,
+    "sell_price": 52,
+    "stats": { "attack": 3 }
+  },
   "jacket": {
     "name": "Field Jacket",
     "description": "Rugged jacket. +1 DEF when equipped.",
@@ -39,6 +82,50 @@
     "buy_price": 40,
     "sell_price": 18,
     "stats": { "defense": 1 }
+  },
+  "leather_vest": {
+    "name": "Leather Vest",
+    "description": "Light protection. +2 DEF when equipped.",
+    "type": "armor",
+    "slot": "armor",
+    "buy_price": 85,
+    "sell_price": 40,
+    "stats": { "defense": 2 }
+  },
+  "expedition_coat": {
+    "name": "Expedition Coat",
+    "description": "A sturdy coat. +1 DEF and +2 Max HP when equipped.",
+    "type": "armor",
+    "slot": "armor",
+    "buy_price": 120,
+    "sell_price": 58,
+    "stats": { "defense": 1, "max_hp": 2 }
+  },
+  "lucky_charm": {
+    "name": "Lucky Charm",
+    "description": "A worn charm. +2 Max HP when equipped.",
+    "type": "trinket",
+    "slot": "trinket",
+    "buy_price": 55,
+    "sell_price": 25,
+    "stats": { "max_hp": 2 }
+  },
+  "iron_ring": {
+    "name": "Iron Ring",
+    "description": "Plain, but tough. +1 DEF when equipped.",
+    "type": "trinket",
+    "slot": "trinket",
+    "buy_price": 60,
+    "sell_price": 28,
+    "stats": { "defense": 1 }
+  },
+  "eagle_eye": {
+    "name": "Eagle Eye Charm",
+    "description": "Keeps you sharp. +1 ATK when equipped.",
+    "type": "trinket",
+    "slot": "trinket",
+    "buy_price": 65,
+    "sell_price": 30,
+    "stats": { "attack": 1 }
   }
 }
-

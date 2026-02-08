@@ -93,6 +93,7 @@ class OutskirtsScene(Scene):
         if event.key == pygame.K_ESCAPE:
             if self.status_open:
                 self.status_open = False
+                self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
                 return None
             from game.scenes.title import TitleScene
 
@@ -100,6 +101,10 @@ class OutskirtsScene(Scene):
 
         if event.key == pygame.K_i:
             self.status_open = not self.status_open
+            self.app.audio.play_sfx(
+                PATHS.sfx / ("ui_open.wav" if self.status_open else "ui_close.wav"),
+                volume=0.35,
+            )
             return None
 
         if self.status_open:
@@ -183,8 +188,10 @@ class OutskirtsScene(Scene):
     def _try_move(self, dx: int, dy: int) -> Scene | None:
         prev = (self.player.x, self.player.y)
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
-        if (self.player.x, self.player.y) != prev and self.player_anim is not None:
-            self.player_anim.on_step(dx, dy)
+        if (self.player.x, self.player.y) != prev:
+            if self.player_anim is not None:
+                self.player_anim.on_step(dx, dy)
+            self.app.audio.play_sfx(PATHS.sfx / "step.wav", volume=0.18)
         tile = self.grid[self.player.y][self.player.x]
         if tile == TILE_EXIT_HOME:
             from game.scenes.town import TownScene
@@ -194,6 +201,7 @@ class OutskirtsScene(Scene):
             self.dungeon_menu_open = True
             self.dungeon_menu_index = 0
             self.message = ""
+            self.app.audio.play_sfx(PATHS.sfx / "ui_open.wav", volume=0.35)
             return None
         self.message = ""
         return None
@@ -219,6 +227,7 @@ class OutskirtsScene(Scene):
     def _handle_dungeon_menu_keys(self, event: pygame.event.Event) -> Scene | None:
         if event.key == pygame.K_ESCAPE:
             self.dungeon_menu_open = False
+            self.app.audio.play_sfx(PATHS.sfx / "ui_close.wav", volume=0.35)
             return None
 
         options = self._dungeon_options()
@@ -234,12 +243,14 @@ class OutskirtsScene(Scene):
             if opt["locked"]:
                 self.message = f"Locked: {opt['lock_reason']}"
                 self.dungeon_menu_open = False
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
 
             from game.scenes.dungeon import DungeonScene
 
             run = DungeonRun(dungeon_id=opt["dungeon_id"], dungeon_name=opt["name"], max_floor=opt["max_floor"])
             self.dungeon_menu_open = False
+            self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
             save_slot(1)
             self.app.toast("Autosaved (slot 1)")
             return DungeonScene(self.app, run, return_to="outskirts")

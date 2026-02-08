@@ -8,7 +8,7 @@ from typing import Any
 from game.state import GameState, STATE
 
 
-SAVE_VERSION = 1
+SAVE_VERSION = 2
 DEFAULT_SAVE_PATH = Path("saves/save1.json")
 
 
@@ -35,11 +35,18 @@ def reset_state(state: GameState = STATE) -> None:
     state.hp = 20
     state.base_attack = 4
     state.base_defense = 0
+    state.combat_level = 1
+    state.combat_xp = 0
+    state.guild_rank = 1
+    state.guild_xp = 0
+    state.chapter = 1
     state.inventory.clear()
-    state.equipment = {"weapon": None, "armor": None}
+    state.equipment = {"weapon": None, "armor": None, "trinket": None}
     state.completed_missions.clear()
     state.claimed_missions.clear()
     state.active_mission = None
+    state.kill_log.clear()
+    state.mission_kill_baseline.clear()
     state.guard_turns = 0
     state.poison_turns = 0
     state.poison_damage = 0
@@ -74,12 +81,22 @@ def _apply_state(state: GameState, payload: dict[str, Any]) -> None:
     state.hp = int(data.get("hp", state.max_hp))
     state.base_attack = int(data.get("base_attack", 4))
     state.base_defense = int(data.get("base_defense", 0))
+    state.combat_level = int(data.get("combat_level", 1))
+    state.combat_xp = int(data.get("combat_xp", 0))
+    state.guild_rank = int(data.get("guild_rank", 1))
+    state.guild_xp = int(data.get("guild_xp", 0))
+    state.chapter = int(data.get("chapter", max(1, min(10, state.guild_rank))))
     state.inventory = {str(k): int(v) for k, v in (data.get("inventory", {}) or {}).items()}
     equip = data.get("equipment", {}) or {}
-    state.equipment = {"weapon": equip.get("weapon", None), "armor": equip.get("armor", None)}
+    state.equipment = {"weapon": equip.get("weapon", None), "armor": equip.get("armor", None), "trinket": equip.get("trinket", None)}
     state.completed_missions = set(data.get("completed_missions", []))
     state.claimed_missions = set(data.get("claimed_missions", []))
     state.active_mission = data.get("active_mission", None)
+    state.kill_log = {str(k): int(v) for k, v in (data.get("kill_log", {}) or {}).items()}
+    state.mission_kill_baseline = {str(k): int(v) for k, v in (data.get("mission_kill_baseline", {}) or {}).items()}
     state.guard_turns = int(data.get("guard_turns", 0))
     state.poison_turns = int(data.get("poison_turns", 0))
     state.poison_damage = int(data.get("poison_damage", 0))
+
+    # Clamp after load (handles max_hp bonus items, older saves, etc.)
+    state.hp = max(0, min(state.hp, state.max_hp_total()))
