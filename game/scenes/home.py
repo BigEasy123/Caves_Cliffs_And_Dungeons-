@@ -67,15 +67,13 @@ class HomeBaseScene(Scene):
             dy = -1
         elif event.key in (pygame.K_DOWN, pygame.K_s):
             dy = 1
-        elif event.key == pygame.K_e:
-            if _is_on_or_adjacent(self.grid, self.player.x, self.player.y, TILE_DOOR):
-                from game.scenes.town import TownScene
-
-                return TownScene(self.app, spawn=(2, GRID_HEIGHT // 2))
-            return None
 
         if dx != 0 or dy != 0:
             self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
+            if self.grid[self.player.y][self.player.x] == TILE_DOOR:
+                from game.scenes.town import TownScene
+
+                return TownScene(self.app, spawn=(2, GRID_HEIGHT // 2))
         return None
 
     def update(self, dt: float) -> Scene | None:
@@ -93,7 +91,7 @@ class HomeBaseScene(Scene):
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
         hud = self.font.render(
-            "Home Base: move WASD/arrows  E: exit (at door)  I: status  Esc: title",
+            "Home Base: move WASD/arrows  Walk onto door to exit  I: status  Esc: title",
             True,
             COLOR_TEXT,
         )
@@ -135,6 +133,7 @@ def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, 
 
 
 def _is_on_or_adjacent(grid: list[list[int]], x: int, y: int, tile: int) -> bool:
+    # Kept for future interactions; exits are collision-based now.
     if grid[y][x] == tile:
         return True
     for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):

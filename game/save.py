@@ -35,6 +35,7 @@ def reset_state(state: GameState = STATE) -> None:
     state.hp = 20
     state.inventory.clear()
     state.completed_missions.clear()
+    state.claimed_missions.clear()
     state.active_mission = None
 
 
@@ -42,6 +43,7 @@ def _serialize_state(state: GameState) -> dict[str, Any]:
     d = asdict(state)
     d["flags"] = sorted(list(state.flags))
     d["completed_missions"] = sorted(list(state.completed_missions))
+    d["claimed_missions"] = sorted(list(state.claimed_missions))
     return {"version": SAVE_VERSION, "state": d}
 
 
@@ -58,5 +60,5 @@ def _apply_state(state: GameState, payload: dict[str, Any]) -> None:
     state.hp = int(data.get("hp", state.max_hp))
     state.inventory = {str(k): int(v) for k, v in (data.get("inventory", {}) or {}).items()}
     state.completed_missions = set(data.get("completed_missions", []))
+    state.claimed_missions = set(data.get("claimed_missions", []))
     state.active_mission = data.get("active_mission", None)
-

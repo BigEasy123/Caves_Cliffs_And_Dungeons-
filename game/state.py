@@ -11,6 +11,7 @@ class GameState:
     hp: int = 20
     inventory: dict[str, int] = field(default_factory=dict)
     completed_missions: set[str] = field(default_factory=set)
+    claimed_missions: set[str] = field(default_factory=set)
     active_mission: str | None = None
 
     def has(self, flag: str) -> bool:

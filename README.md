@@ -10,13 +10,13 @@ A game that is a blend of Indy Jones and Pokemon mystery dungeon.
 
 ## Controls
 - Title: `Enter` start adventure, `P` platformer prototype, `Esc` quit
-- Home: `WASD`/arrows move, `E` exit to town, `I` status, `Esc` title
-- Town: `WASD`/arrows move, `E` talk/enter buildings/exit, `I` status, `Esc` title
-- Outskirts: `WASD`/arrows move, `E` enter dungeon / return to town, `I` status, `Esc` title
+- Home: `WASD`/arrows move, walk onto door to exit, `I` status, `Esc` title
+- Town: `WASD`/arrows move, `E` talk/enter buildings, walk onto exits to travel, `I` status, `Esc` title
+- Outskirts: `WASD`/arrows move, walk onto exit/gate, `I` status, `Esc` title
 - Dungeon: `WASD`/arrows move (turn-based), walk into enemies to attack, `E` stairs/exit (bottom only), `I` inventory, `R` regenerate
 - Dialogue: `Enter`/`E` next, `Esc` close
 - Shop: `Tab` buy/sell, `Enter`/`E` confirm, `Esc` back
-- Guild: `Enter`/`E` accept mission, `Esc` back
+- Guild: `Enter`/`E` accept/turn-in mission, `Esc` back
 - Status: `I` open/close (gold + items)
 - Saves: `F5` save, `F9` load, `F8` reset
 

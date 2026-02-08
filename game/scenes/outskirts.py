@@ -4,7 +4,6 @@ from game.assets import try_load_sprite
 from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
-    COLOR_DUNGEON_JUNGLE,
     COLOR_DUNGEON_TEMPLE,
     COLOR_EXIT,
     COLOR_FLOOR,
@@ -45,11 +44,13 @@ class OutskirtsScene(Scene):
             TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_EXIT_HOME: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
+            # Single gate tile (uses temple.png by default).
             TILE_DUNGEON_TEMPLE: try_load_sprite(PATHS.tiles / "temple.png", size=(TILE_SIZE, TILE_SIZE)),
-            TILE_DUNGEON_JUNGLE: try_load_sprite(PATHS.tiles / "jungle.png", size=(TILE_SIZE, TILE_SIZE)),
         }
 
         self.message = ""
+        self.dungeon_menu_open = False
+        self.dungeon_menu_index = 0
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type != pygame.KEYDOWN:
@@ -70,6 +71,9 @@ class OutskirtsScene(Scene):
         if self.status_open:
             return None
 
+        if self.dungeon_menu_open:
+            return self._handle_dungeon_menu_keys(event)
+
         dx, dy = 0, 0
         if event.key in (pygame.K_LEFT, pygame.K_a):
             dx = -1
@@ -79,11 +83,11 @@ class OutskirtsScene(Scene):
             dy = -1
         elif event.key in (pygame.K_DOWN, pygame.K_s):
             dy = 1
-        elif event.key == pygame.K_e:
-            return self._try_enter()
 
         if dx != 0 or dy != 0:
-            self._try_move(dx, dy)
+            next_scene = self._try_move(dx, dy)
+            if next_scene is not None:
+                return next_scene
         return None
 
     def update(self, dt: float) -> Scene | None:
@@ -100,49 +104,105 @@ class OutskirtsScene(Scene):
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
-        hud = self.font.render("Outskirts: move WASD/arrows  E: enter  I: status  Esc: title", True, COLOR_TEXT)
+        hud = self.font.render("Outskirts: move WASD/arrows  Walk onto gate/exit  I: status  Esc: title", True, COLOR_TEXT)
         surface.blit(hud, (10, 8))
 
         if self.message:
             msg = self.font.render(self.message, True, (220, 190, 120))
             surface.blit(msg, (10, 32))
 
+        if self.dungeon_menu_open:
+            self._draw_dungeon_menu(surface)
+
         if self.status_open:
             self.status_menu.draw(surface, STATE)
 
-    def _try_move(self, dx: int, dy: int) -> None:
-        from game.entities.player import GridPlayer
-
+    def _try_move(self, dx: int, dy: int) -> Scene | None:
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
-        self.message = ""
-
-    def _try_enter(self) -> Scene | None:
-        tile = _adjacent_tile(self.grid, self.player.x, self.player.y)
+        tile = self.grid[self.player.y][self.player.x]
         if tile == TILE_EXIT_HOME:
             from game.scenes.town import TownScene
 
             return TownScene(self.app, spawn=(GRID_WIDTH - 3, GRID_HEIGHT // 2))
-
         if tile == TILE_DUNGEON_TEMPLE:
-            if not STATE.has(FLAG_GOT_TEMPLE_PASS):
-                self.message = "Temple Ruins is locked. Talk to the Mayor in town."
-                return None
-            from game.scenes.dungeon import DungeonScene
-
-            run = DungeonRun(dungeon_id="temple_ruins", dungeon_name="Temple Ruins", max_floor=5)
-            return DungeonScene(self.app, run, return_to="outskirts")
-
-        if tile == TILE_DUNGEON_JUNGLE:
-            if "relic_shard" not in STATE.completed_missions:
-                self.message = "Jungle Cavern is locked. Complete a guild mission."
-                return None
-            from game.scenes.dungeon import DungeonScene
-
-            run = DungeonRun(dungeon_id="jungle_cavern", dungeon_name="Jungle Cavern", max_floor=7)
-            return DungeonScene(self.app, run, return_to="outskirts")
-
-        self.message = "Nothing to enter here."
+            self.dungeon_menu_open = True
+            self.dungeon_menu_index = 0
+            self.message = ""
+            return None
+        self.message = ""
         return None
+
+    def _dungeon_options(self) -> list[dict]:
+        return [
+            {
+                "name": "Temple Ruins",
+                "dungeon_id": "temple_ruins",
+                "max_floor": 5,
+                "locked": (not STATE.has(FLAG_GOT_TEMPLE_PASS)),
+                "lock_reason": "Talk to the Mayor in town to get the pass.",
+            },
+            {
+                "name": "Jungle Cavern",
+                "dungeon_id": "jungle_cavern",
+                "max_floor": 7,
+                "locked": ("relic_shard" not in STATE.completed_missions),
+                "lock_reason": "Complete a guild mission to unlock.",
+            },
+        ]
+
+    def _handle_dungeon_menu_keys(self, event: pygame.event.Event) -> Scene | None:
+        if event.key == pygame.K_ESCAPE:
+            self.dungeon_menu_open = False
+            return None
+
+        options = self._dungeon_options()
+        if not options:
+            return None
+
+        if event.key in (pygame.K_UP, pygame.K_w):
+            self.dungeon_menu_index = (self.dungeon_menu_index - 1) % len(options)
+        elif event.key in (pygame.K_DOWN, pygame.K_s):
+            self.dungeon_menu_index = (self.dungeon_menu_index + 1) % len(options)
+        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e):
+            opt = options[self.dungeon_menu_index]
+            if opt["locked"]:
+                self.message = f"Locked: {opt['lock_reason']}"
+                self.dungeon_menu_open = False
+                return None
+
+            from game.scenes.dungeon import DungeonScene
+
+            run = DungeonRun(dungeon_id=opt["dungeon_id"], dungeon_name=opt["name"], max_floor=opt["max_floor"])
+            self.dungeon_menu_open = False
+            return DungeonScene(self.app, run, return_to="outskirts")
+        return None
+
+    def _draw_dungeon_menu(self, surface: pygame.Surface) -> None:
+        width, height = surface.get_size()
+        rect = pygame.Rect(60, 80, width - 120, height - 160)
+
+        overlay = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 210))
+        surface.blit(overlay, rect.topleft)
+        pygame.draw.rect(surface, (255, 255, 255), rect, 2)
+
+        title = self.font.render("Choose a Dungeon (Up/Down, Enter/E, Esc)", True, COLOR_TEXT)
+        surface.blit(title, (rect.left + 14, rect.top + 14))
+
+        options = self._dungeon_options()
+        y = rect.top + 54
+        for idx, opt in enumerate(options):
+            prefix = "> " if idx == self.dungeon_menu_index else "  "
+            locked = " (LOCKED)" if opt["locked"] else ""
+            line = self.font.render(f"{prefix}{opt['name']}{locked}", True, COLOR_TEXT)
+            surface.blit(line, (rect.left + 14, y))
+            y += 28
+
+        if options:
+            opt = options[self.dungeon_menu_index]
+            info = opt["lock_reason"] if opt["locked"] else f"Floors: 1-{opt['max_floor']}"
+            hint = self.font.render(info, True, (200, 200, 210))
+            surface.blit(hint, (rect.left + 14, rect.bottom - 18 - hint.get_height()))
 
 
 def _layout(width: int, height: int) -> list[list[int]]:
@@ -163,10 +223,8 @@ def _layout(width: int, height: int) -> list[list[int]]:
     # Entrance back to town on the left
     grid[height // 2][1] = TILE_EXIT_HOME
 
-    # Temple Ruins entrance (upper)
-    grid[5][width - 6] = TILE_DUNGEON_TEMPLE
-    # Jungle Cavern entrance (lower)
-    grid[height - 6][width - 6] = TILE_DUNGEON_JUNGLE
+    # Single dungeon gate on the right
+    grid[height // 2][width - 6] = TILE_DUNGEON_TEMPLE
     return grid
 
 
@@ -183,8 +241,6 @@ def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, 
                 color = COLOR_EXIT
             elif cell == TILE_DUNGEON_TEMPLE:
                 color = COLOR_DUNGEON_TEMPLE
-            elif cell == TILE_DUNGEON_JUNGLE:
-                color = COLOR_DUNGEON_JUNGLE
             else:
                 color = COLOR_FLOOR
             pygame.draw.rect(surface, color, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
@@ -198,4 +254,3 @@ def _adjacent_tile(grid: list[list[int]], x: int, y: int) -> int | None:
             if cell != TILE_FLOOR and cell != TILE_WALL:
                 return cell
     return None
-

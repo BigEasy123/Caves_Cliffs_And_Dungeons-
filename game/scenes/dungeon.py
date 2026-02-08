@@ -464,12 +464,12 @@ class DungeonScene(Scene):
         if STATE.active_mission == "relic_shard" and STATE.item_count("relic_shard") > 0:
             STATE.completed_missions.add("relic_shard")
             STATE.active_mission = None
-            self.message = "Mission complete: Found a Relic Shard!"
+            self.message = "Mission complete: Found a Relic Shard! Return to the Guild."
             completed = True
         if STATE.active_mission == "reach_floor_3" and self.run.dungeon_id == "temple_ruins" and self.run.floor >= 3:
             STATE.completed_missions.add("reach_floor_3")
             STATE.active_mission = None
-            self.message = "Mission complete: Reached Floor 3!"
+            self.message = "Mission complete: Reached Floor 3! Return to the Guild."
             completed = True
 
         if completed:

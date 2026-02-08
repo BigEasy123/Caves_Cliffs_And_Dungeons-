@@ -109,7 +109,7 @@ class TownScene(Scene):
                 self.grid,
                 self.player.x,
                 self.player.y,
-                {TILE_EXIT_HOME, TILE_EXIT_OUTSKIRTS, TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
+                {TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
             )
             if door_tile == TILE_SHOP_DOOR:
                 from game.scenes.shop import ShopScene
@@ -123,18 +123,12 @@ class TownScene(Scene):
                 from game.scenes.healer import HealerScene
 
                 return HealerScene(self.app)
-            if door_tile == TILE_EXIT_HOME:
-                from game.scenes.home import HomeBaseScene
-
-                return HomeBaseScene(self.app)
-            if door_tile == TILE_EXIT_OUTSKIRTS:
-                from game.scenes.outskirts import OutskirtsScene
-
-                return OutskirtsScene(self.app, spawn=(3, GRID_HEIGHT // 2))
             return None
 
         if dx != 0 or dy != 0:
-            self._try_move_player(dx, dy)
+            next_scene = self._try_move_player(dx, dy)
+            if next_scene is not None:
+                return next_scene
         return None
 
     def update(self, dt: float) -> Scene | None:
@@ -158,14 +152,14 @@ class TownScene(Scene):
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
-        hint = "Town: move WASD/arrows  E: talk/enter/exit  I: status  Esc: title"
+        hint = "Town: move WASD/arrows  E: talk/enter  Walk onto exits  I: status  Esc: title"
         if self._interactable_npc() is not None:
             hint = "Town: E to talk"
         elif _adjacent_tile(
             self.grid,
             self.player.x,
             self.player.y,
-            {TILE_EXIT_HOME, TILE_EXIT_OUTSKIRTS, TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
+            {TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
         ) is not None:
             hint = "Town: E to enter"
         hud = self.font.render(hint, True, COLOR_TEXT)
@@ -206,12 +200,22 @@ class TownScene(Scene):
                 return npc
         return None
 
-    def _try_move_player(self, dx: int, dy: int) -> None:
+    def _try_move_player(self, dx: int, dy: int) -> Scene | None:
         nx = self.player.x + dx
         ny = self.player.y + dy
         if any(npc.x == nx and npc.y == ny for npc in self.npcs):
-            return
+            return None
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
+        tile = self.grid[self.player.y][self.player.x]
+        if tile == TILE_EXIT_HOME:
+            from game.scenes.home import HomeBaseScene
+
+            return HomeBaseScene(self.app)
+        if tile == TILE_EXIT_OUTSKIRTS:
+            from game.scenes.outskirts import OutskirtsScene
+
+            return OutskirtsScene(self.app, spawn=(3, GRID_HEIGHT // 2))
+        return None
 
 
 def _town_layout(width: int, height: int) -> list[list[int]]:
