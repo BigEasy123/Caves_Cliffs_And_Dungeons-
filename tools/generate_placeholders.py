@@ -106,6 +106,12 @@ def _generate_pngs(*, tile_size: int, tiles_dir: Path, sprites_dir: Path, overwr
         tile(tiles_dir / f"wall_mine{i}.png", f"MWALL{i}", Colors((68, 60, 50), (145, 125, 100)), texture="mine_wall", icon=None, variant=110 + i)
         tile(tiles_dir / f"floor_babel{i}.png", f"BABEL{i}", Colors((46, 44, 58), (170, 160, 210)), texture="babel_floor", icon=None, variant=120 + i)
         tile(tiles_dir / f"wall_babel{i}.png", f"BWALL{i}", Colors((72, 68, 92), (210, 200, 240)), texture="babel_wall", icon=None, variant=130 + i)
+        tile(tiles_dir / f"floor_snow{i}.png", f"SNOW{i}", Colors((200, 210, 225), (245, 245, 255)), texture="snow", icon=None, variant=140 + i)
+        tile(tiles_dir / f"floor_ice{i}.png", f"ICE{i}", Colors((130, 170, 210), (220, 245, 255)), texture="ice", icon=None, variant=150 + i)
+        tile(tiles_dir / f"wall_ice{i}.png", f"WICE{i}", Colors((110, 140, 180), (210, 240, 255)), texture="ice_wall", icon=None, variant=160 + i)
+        tile(tiles_dir / f"floor_lava{i}.png", f"LAVA{i}", Colors((120, 24, 18), (255, 180, 60)), texture="lava", icon=None, variant=170 + i)
+        tile(tiles_dir / f"floor_magma{i}.png", f"MAGMA{i}", Colors((60, 14, 18), (240, 120, 50)), texture="magma", icon=None, variant=180 + i)
+        tile(tiles_dir / f"wall_basalt{i}.png", f"BASALT{i}", Colors((34, 34, 42), (100, 100, 120)), texture="basalt", icon=None, variant=190 + i)
 
     sprite(sprites_dir / "player.png", "YOU", Colors((240, 210, 80), (110, 80, 20)), icon="person")
     sprite(sprites_dir / "enemy.png", "FOE", Colors((220, 90, 90), (110, 30, 30)), icon="skull")
@@ -375,6 +381,74 @@ def _draw_texture(surf, icon: str, colors: Colors, *, variant: int) -> None:
                 for y in range(2, h - 2):
                     if jitter(x, y) < 210:
                         surf.set_at((x, y), shade(colors.bg, 22))
+        return
+
+    if icon == "snow":
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 26:
+                    surf.set_at((x, y), shade(colors.bg, 18))
+                elif n > 242:
+                    surf.set_at((x, y), shade(colors.bg, -10))
+                if (x * 5 + y * 11 + variant) % 41 == 0 and n < 210:
+                    surf.set_at((x, y), (255, 255, 255))
+        return
+
+    if icon == "ice":
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 14:
+                    surf.set_at((x, y), shade(colors.bg, 22))
+                elif n > 248:
+                    surf.set_at((x, y), shade(colors.bg, -12))
+                if (x - y + variant) % 13 == 0 and n < 230:
+                    surf.set_at((x, y), shade(colors.bg, 16))
+        return
+
+    if icon == "ice_wall":
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 8:
+                    surf.set_at((x, y), shade(colors.bg, 24))
+                elif n > 250:
+                    surf.set_at((x, y), shade(colors.bg, -14))
+        for x in range(5, w - 5, 6):
+            if (x + variant) % 12 == 0:
+                for y in range(2, h - 2):
+                    if jitter(x, y) < 220:
+                        surf.set_at((x, y), shade(colors.bg, 18))
+        return
+
+    if icon in ("lava", "magma"):
+        # Hot rock: bright specks + flowing veins.
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 18:
+                    surf.set_at((x, y), shade(colors.bg, 18))
+                elif n > 248:
+                    surf.set_at((x, y), shade(colors.bg, -10))
+                # Veins
+                if (x * 5 + y * 3 + variant) % (17 if icon == "lava" else 19) == 0 and n < 230:
+                    surf.set_at((x, y), shade(colors.fg, 10))
+                if icon == "lava" and (x - y + variant) % 23 == 0 and n < 210:
+                    surf.set_at((x, y), colors.fg)
+        return
+
+    if icon == "basalt":
+        # Dark wall with subtle fissures.
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 10:
+                    surf.set_at((x, y), shade(colors.bg, 14))
+                elif n > 250:
+                    surf.set_at((x, y), shade(colors.bg, -10))
+                if (x + y + variant) % 29 == 0 and n < 220:
+                    surf.set_at((x, y), shade(colors.bg, 24))
         return
 
     # Doors / special: subtle diagonal

@@ -18,6 +18,7 @@ class MissionDef:
     turn_in_lines: list[str] = field(default_factory=list)
     reward_gold: int = 0
     reward_guild_xp: int = 0
+    board: str = "guild"  # guild | ice_camp
     reward_items: dict[str, int] = field(default_factory=dict)
     consume_items: dict[str, int] = field(default_factory=dict)
     objectives: list[dict[str, Any]] = field(default_factory=list)
@@ -206,6 +207,7 @@ def _missions_from_json(data: dict[str, Any]) -> dict[str, MissionDef]:
             turn_in_lines=list(raw.get("turn_in_lines", []) or []),
             reward_gold=int(raw.get("reward_gold", 0)),
             reward_guild_xp=int(raw.get("reward_guild_xp", 0)),
+            board=str(raw.get("board", "guild")),
             reward_items=dict(raw.get("reward_items", {}) or {}),
             consume_items=dict(raw.get("consume_items", {}) or {}),
             objectives=list(raw.get("objectives", []) or []),

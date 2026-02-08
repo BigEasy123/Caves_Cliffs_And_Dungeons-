@@ -8,6 +8,8 @@ from game.story.missions import MISSIONS, apply_turn_in_rewards, is_turn_in_avai
 from game.ui.dialogue_box import DialogueBox
 from game.ui.status_menu import StatusMenu
 from game.story.flags import (
+    FLAG_ARROW_TIP_LOST,
+    FLAG_FOUND_ARROWHEAD_MAP,
     FLAG_BOW_DESTROYED,
     FLAG_BOW_STOLEN,
     FLAG_CULT_STOLE_CREDIT,
@@ -46,6 +48,11 @@ class GuildScene(Scene):
             if self.dialogue_lines is not None:
                 self._close_dialogue()
                 return None
+            board = str(getattr(STATE, "mission_board", "guild"))
+            if board == "ice_camp":
+                from game.scenes.base_camp import BaseCampScene
+
+                return BaseCampScene(self.app)
             from game.scenes.town import TownScene
 
             return TownScene(self.app)
@@ -98,7 +105,9 @@ class GuildScene(Scene):
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
-        title = self.font_title.render("Guild", True, COLOR_TEXT)
+        board = str(getattr(STATE, "mission_board", "guild"))
+        title_text = "Guild" if board == "guild" else "Base Camp Board"
+        title = self.font_title.render(title_text, True, COLOR_TEXT)
         surface.blit(title, (40, 50))
 
         header = self.font.render("Up/Down select  Enter/E accept  Esc back", True, COLOR_TEXT)
@@ -144,6 +153,9 @@ class GuildScene(Scene):
         ids: list[str] = []
         for mission_id, mission in MISSIONS.items():
             if int(getattr(mission, "min_chapter", 1)) <= int(getattr(STATE, "chapter", 1)):
+                board = str(getattr(mission, "board", "guild"))
+                if str(getattr(STATE, "mission_board", "guild")) != board:
+                    continue
                 ids.append(mission_id)
         ids.sort(key=lambda mid: (int(getattr(MISSIONS[mid], "min_chapter", 1)), MISSIONS[mid].name))
         return ids
@@ -230,12 +242,51 @@ class GuildScene(Scene):
                 return
             if mission_id == "nimrods_bow_destroy":
                 STATE.set(FLAG_BOW_DESTROYED)
+                STATE.set(FLAG_ARROW_TIP_LOST)
+                STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 7)
                 self._start_dialogue(
                     speaker="Professor",
                     lines=[
-                        "Good. It's over.",
-                        "No relic. No leverage. No fracture point.",
-                        f"But {CHILDREN_OF_THE_NEPHIL} will not forget what you did.",
+                        "Good. It's over... mostly.",
+                        "When the bow shattered, a single tip refused to burnâ€”like the world itself wouldn't let it vanish.",
+                        "We've lost it in a land of ice.",
+                        f"And {CHILDREN_OF_THE_NEPHIL} will chase it. So will we.",
+                        "Head to the Outskirts gate. An Ice Expedition Base Camp is being established.",
+                    ],
+                )
+                return
+            if mission_id == "ice_arrowhead_map":
+                STATE.set(FLAG_FOUND_ARROWHEAD_MAP)
+                STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 8)
+                STATE.mission_board = "guild"
+                self._start_dialogue(
+                    speaker="Professor",
+                    lines=[
+                        "This map... it points to the arrow tipâ€”across the world.",
+                        "Pack light. We race the Children from this moment on.",
+                        "Chapter 8 begins: Around the World.",
+                    ],
+                )
+                return
+            if mission_id == "tropic_arrowhead":
+                STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 9)
+                self._start_dialogue(
+                    speaker="Professor",
+                    lines=[
+                        "You have it. The arrow tip.",
+                        "The trail doesn't endâ€”it dives. The Children are moving underground.",
+                        "Chapter 9 begins: Journey to the Core.",
+                    ],
+                )
+                return
+            if mission_id == "core_finale":
+                STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 10)
+                self._start_dialogue(
+                    speaker="Professor",
+                    lines=[
+                        "The Children fell into their own trap.",
+                        "Whatever wrath swallowed the Nephil has stirred again.",
+                        "For now... come home.",
                     ],
                 )
                 return

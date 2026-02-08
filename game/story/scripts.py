@@ -5,6 +5,8 @@ from typing import Callable
 
 from game.state import GameState
 from game.story.flags import (
+    FLAG_ARROW_TIP_LOST,
+    FLAG_FOUND_ARROWHEAD_MAP,
     FLAG_CULT_STOLE_CREDIT,
     FLAG_BOW_DESTROYED,
     FLAG_BOW_STOLEN,
@@ -99,6 +101,58 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                     "If your 'friend' goes missing, you bring them back. Understood?",
                 ],
             )
+        if chapter == 6:
+            return DialogueScript(
+                speaker="Professor",
+                lines=[
+                    "The tower wasn't a myth. It was a trap with a history.",
+                    f"If {CHILDREN_OF_THE_NEPHIL} has the bow, we take it back.",
+                    "And then we destroy it. No trophies. No excuses.",
+                ],
+            )
+        if chapter == 7:
+            if state.has(FLAG_ARROW_TIP_LOST):
+                return DialogueScript(
+                    speaker="Professor",
+                    lines=[
+                        "The bow is shattered. But one fragment slipped away.",
+                        "We chase it into the ice. Not for gloryâ€”for containment.",
+                        "Check the Base Camp board. We'll operate from there until we have a lead.",
+                    ],
+                )
+            return DialogueScript(
+                speaker="Professor",
+                lines=[
+                    "Keep your eyes open out there.",
+                    "The world doesn't like it when we break old weapons.",
+                ],
+            )
+        if chapter == 8:
+            if state.has(FLAG_FOUND_ARROWHEAD_MAP):
+                return DialogueScript(
+                    speaker="Professor",
+                    lines=[
+                        "Across the world... of course.",
+                        "If the Children reach that island first, the arrow tip becomes a weapon again.",
+                        "Move fast, {player}.",
+                    ],
+                )
+            return DialogueScript(
+                speaker="Professor",
+                lines=[
+                    "We're running out of time.",
+                    "Find the map. Then we move.",
+                ],
+            )
+        if chapter == 9:
+            return DialogueScript(
+                speaker="Professor",
+                lines=[
+                    "They've gone underground. Deeper than any ruin we've mapped.",
+                    "If the stories are true... something like the old flood waits below.",
+                    "Don't let them wake it.",
+                ],
+            )
         if chapter <= 3:
             return DialogueScript(
                 speaker="Professor",
@@ -123,6 +177,14 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
             ],
         )
     if npc_id == "mayor":
+        if state.has(FLAG_MET_MAYOR) and chapter >= 7:
+            return DialogueScript(
+                speaker="Mayor",
+                lines=[
+                    "The Guild's packing for an expedition. Ice this time.",
+                    "If you're going, bring the town back a future.",
+                ],
+            )
         if not state.has(FLAG_MET_MAYOR):
             return DialogueScript(
                 speaker="Mayor",
@@ -167,6 +229,14 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
         )
 
     if npc_id == "archivist":
+        if chapter >= 7:
+            return DialogueScript(
+                speaker="Archivist",
+                lines=[
+                    "Ice preserves lies for a long time.",
+                    "If you find a map with unfamiliar coastlines... do not assume it's wrong.",
+                ],
+            )
         if state.has(FLAG_GOT_TEMPLE_PASS):
             return DialogueScript(
                 speaker="Archivist",
@@ -294,6 +364,14 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                     "If you bring back anything Nephil, label it. The Professor pretends he doesn't care—he does.",
                 ],
             )
+        if chapter >= 7:
+            return DialogueScript(
+                speaker="Ren (TA)",
+                lines=[
+                    "Base camp life is all logistics.",
+                    "If you come back with frost on your lashes, drink water anyway. Trust me.",
+                ],
+            )
         return DialogueScript(speaker="Ren (TA)", lines=["Stay alive, {player}. That's my whole request."])
 
     if npc_id == "ta_lena":
@@ -320,6 +398,14 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                 lines=[
                     "They stole the rescue story. I know.",
                     "Don't burn yourself out trying to prove the truth. We'll help you show it.",
+                ],
+            )
+        if chapter >= 8 and state.has(FLAG_FOUND_ARROWHEAD_MAP):
+            return DialogueScript(
+                speaker="Lena (TA)",
+                lines=[
+                    "So it's really on the other side of the world...",
+                    "Promise me you won't fight the Children alone.",
                 ],
             )
         return DialogueScript(speaker="Lena (TA)", lines=["Guild politics are messy. Keep your compass internal."])

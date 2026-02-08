@@ -171,5 +171,98 @@
     "move_interval": 2,
     "attack_interval": 2,
     "behavior": "melee"
+  },
+  "ice_wolf": {
+    "name": "Ice Wolf",
+    "base_hp": 10,
+    "hp_per_floor": 3,
+    "attack": 5,
+    "defense": 1,
+    "aggro_range": 6,
+    "move_interval": 1,
+    "attack_interval": 2,
+    "behavior": "melee"
+  },
+  "frost_wraith": {
+    "name": "Frost Wraith",
+    "base_hp": 9,
+    "hp_per_floor": 3,
+    "attack": 5,
+    "defense": 1,
+    "aggro_range": 8,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "ranged",
+    "ranged_range": 5
+  },
+  "ice_golem": {
+    "name": "Ice Golem",
+    "base_hp": 18,
+    "hp_per_floor": 5,
+    "attack": 7,
+    "defense": 3,
+    "aggro_range": 7,
+    "move_interval": 3,
+    "attack_interval": 2,
+    "behavior": "melee_patrol"
+  },
+  "ash_lizard": {
+    "name": "Ash Lizard",
+    "base_hp": 11,
+    "hp_per_floor": 3,
+    "attack": 6,
+    "defense": 1,
+    "aggro_range": 6,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "poison_melee",
+    "poison_turns": 3,
+    "poison_damage": 1
+  },
+  "magma_wisp": {
+    "name": "Magma Wisp",
+    "base_hp": 10,
+    "hp_per_floor": 3,
+    "attack": 6,
+    "defense": 1,
+    "aggro_range": 8,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "ranged",
+    "ranged_range": 4
+  },
+  "ice_colossus": {
+    "name": "Ice Colossus",
+    "base_hp": 46,
+    "hp_per_floor": 6,
+    "attack": 9,
+    "defense": 4,
+    "aggro_range": 9,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "melee_patrol"
+  },
+  "children_warmaster": {
+    "name": "Child Warmaster",
+    "base_hp": 50,
+    "hp_per_floor": 6,
+    "attack": 10,
+    "defense": 4,
+    "aggro_range": 9,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "melee"
+  },
+  "children_high_priest": {
+    "name": "Child High Priest",
+    "base_hp": 54,
+    "hp_per_floor": 7,
+    "attack": 10,
+    "defense": 5,
+    "aggro_range": 10,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "ranged",
+    "ranged_range": 6
   }
 }

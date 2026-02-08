@@ -18,6 +18,7 @@ class GameState:
     guild_rank: int = 1
     guild_xp: int = 0
     chapter: int = 1
+    mission_board: str = "guild"  # guild | ice_camp
     inventory: dict[str, int] = field(default_factory=dict)
     equipment: dict[str, str | None] = field(default_factory=lambda: {"weapon": None, "armor": None, "trinket": None})
     completed_missions: set[str] = field(default_factory=set)

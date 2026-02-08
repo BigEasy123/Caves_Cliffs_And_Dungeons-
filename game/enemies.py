@@ -199,6 +199,42 @@ def enemy_table_for_dungeon(dungeon_id: str, floor: int) -> list[str]:
         if floor <= 4:
             return ["cult_saboteur", "cult_initiate", "children_enforcer"]
         return ["cult_initiate", "children_enforcer", "giant_scout"]
+    if dungeon_id == "snowbound_path":
+        if floor <= 2:
+            return ["ice_wolf", "frost_wraith"]
+        if floor <= 4:
+            return ["ice_wolf", "frost_wraith", "ice_golem"]
+        return ["frost_wraith", "ice_golem"]
+    if dungeon_id == "ice_cave":
+        if floor <= 2:
+            return ["ice_wolf", "bat"]
+        if floor <= 4:
+            return ["ice_wolf", "frost_wraith", "bat"]
+        return ["frost_wraith", "ice_golem", "bat"]
+    if dungeon_id == "ice_cave_2":
+        if floor <= 2:
+            return ["frost_wraith", "ice_wolf"]
+        if floor <= 4:
+            return ["frost_wraith", "ice_golem", "ice_wolf"]
+        return ["ice_golem", "frost_wraith"]
+    if dungeon_id == "mt_arot":
+        if floor <= 2:
+            return ["frost_wraith", "ice_wolf"]
+        if floor <= 4:
+            return ["ice_wolf", "frost_wraith", "ice_golem"]
+        return ["ice_golem", "frost_wraith"]
+    if dungeon_id == "tropic_volcano":
+        if floor <= 2:
+            return ["ash_lizard", "raider"]
+        if floor <= 4:
+            return ["ash_lizard", "magma_wisp", "raider"]
+        return ["ash_lizard", "magma_wisp", "cult_initiate"]
+    if dungeon_id == "core_descent":
+        if floor <= 2:
+            return ["children_enforcer", "cult_initiate"]
+        if floor <= 4:
+            return ["children_enforcer", "magma_wisp", "cult_initiate"]
+        return ["children_enforcer", "magma_wisp", "guardian"]
     if dungeon_id == "jungle_cavern":
         if floor <= 2:
             return ["snake", "bat"]

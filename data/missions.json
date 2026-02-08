@@ -323,5 +323,112 @@
     "objectives": [
       { "type": "collect_item", "item_id": "nimrods_bow", "count": 1 }
     ]
+  },
+  "ice_bounty_wolves": {
+    "name": "Ice Expedition: Thin the Wolves",
+    "description": "Predators are circling the base camp. Cull the pack leaders.",
+    "mission_type": "bounty",
+    "min_chapter": 7,
+    "board": "ice_camp",
+    "accept_lines": [
+      "Something is watching the tents at night.",
+      "Defeat 4 Ice Wolves along the Snowbound Path."
+    ],
+    "turn_in_lines": [
+      "Good. Fewer eyes in the dark.",
+      "Stay warm. Stay moving."
+    ],
+    "reward_gold": 90,
+    "reward_guild_xp": 95,
+    "reward_items": { "potion_medium": 1 },
+    "objectives": [
+      { "type": "defeat_enemy", "enemy_id": "ice_wolf", "count": 4 }
+    ]
+  },
+  "ice_recon_ice_cave": {
+    "name": "Ice Expedition: Cave Recon",
+    "description": "Map the ice cave tunnels and report what you find.",
+    "mission_type": "escort",
+    "min_chapter": 7,
+    "board": "ice_camp",
+    "accept_lines": [
+      "The ice cave winds like a throat.",
+      "Reach Floor 3 and come back with notes."
+    ],
+    "turn_in_lines": [
+      "Tight passages, strange echoes... understood.",
+      "If the Children show up, do not engage alone."
+    ],
+    "reward_gold": 75,
+    "reward_guild_xp": 85,
+    "reward_items": { "antidote": 1 },
+    "objectives": [
+      { "type": "reach_floor", "dungeon_id": "ice_cave", "floor": 3 }
+    ]
+  },
+  "ice_arrowhead_map": {
+    "name": "Chapter 7: Find the Arrowhead Map",
+    "description": "Push up Mt Arot and recover the map that points to the lost arrow tip.",
+    "mission_type": "rescue",
+    "min_chapter": 7,
+    "board": "ice_camp",
+    "accept_lines": [
+      "The bow is goneâ€”but a fragment remains somewhere in the ice.",
+      "Climb Mt Arot. Something ancient guards a map we need.",
+      "Bring back the Arrowhead Map before the Children can."
+    ],
+    "turn_in_lines": [
+      "You found it...",
+      "This could change everything."
+    ],
+    "reward_gold": 200,
+    "reward_guild_xp": 220,
+    "reward_items": { "iron_ring": 1 },
+    "consume_items": { "arrowhead_map": 1 },
+    "objectives": [
+      { "type": "collect_item", "item_id": "arrowhead_map", "count": 1 }
+    ]
+  },
+  "tropic_arrowhead": {
+    "name": "Chapter 8: Race for the Arrow Tip",
+    "description": "Sail to a tropical island and recover the arrow tip from within a volcano.",
+    "mission_type": "rescue",
+    "min_chapter": 8,
+    "accept_lines": [
+      "The map points to a tropical islandâ€”with a volcano.",
+      "The Children will be there. They always are.",
+      "Retrieve the Arrow Tip Fragment and return immediately."
+    ],
+    "turn_in_lines": [
+      "You have it.",
+      "Good. Now we follow them underground."
+    ],
+    "reward_gold": 260,
+    "reward_guild_xp": 260,
+    "reward_items": { "potion_medium": 2 },
+    "consume_items": { "arrowhead_tip": 1 },
+    "objectives": [
+      { "type": "collect_item", "item_id": "arrowhead_tip", "count": 1 }
+    ]
+  },
+  "core_finale": {
+    "name": "Chapter 9: Final Descent",
+    "description": "Descend to the core and stop the Children before they trigger a second flood.",
+    "mission_type": "bounty",
+    "min_chapter": 9,
+    "accept_lines": [
+      "No retreat this time.",
+      "Descend to the deepest chamber and defeat the Child High Priest."
+    ],
+    "turn_in_lines": [
+      "It's done...",
+      "For now."
+    ],
+    "reward_gold": 350,
+    "reward_guild_xp": 340,
+    "reward_items": { "potion_medium": 2, "antidote": 1 },
+    "objectives": [
+      { "type": "defeat_enemy", "enemy_id": "children_high_priest", "count": 1 }
+    ]
   }
 }

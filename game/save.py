@@ -8,7 +8,7 @@ from typing import Any
 from game.state import GameState, STATE
 
 
-SAVE_VERSION = 5
+SAVE_VERSION = 6
 DEFAULT_SAVE_PATH = Path("saves/save1.json")
 
 
@@ -41,6 +41,7 @@ def reset_state(state: GameState = STATE) -> None:
     state.guild_rank = 1
     state.guild_xp = 0
     state.chapter = 1
+    state.mission_board = "guild"
     state.inventory.clear()
     state.equipment = {"weapon": None, "armor": None, "trinket": None}
     state.completed_missions.clear()
@@ -94,6 +95,7 @@ def _apply_state(state: GameState, payload: dict[str, Any]) -> None:
     state.guild_rank = int(data.get("guild_rank", 1))
     state.guild_xp = int(data.get("guild_xp", 0))
     state.chapter = int(data.get("chapter", max(1, min(10, state.guild_rank))))
+    state.mission_board = str(data.get("mission_board", "guild"))
     state.inventory = {str(k): int(v) for k, v in (data.get("inventory", {}) or {}).items()}
     equip = data.get("equipment", {}) or {}
     state.equipment = {"weapon": equip.get("weapon", None), "armor": equip.get("armor", None), "trinket": equip.get("trinket", None)}

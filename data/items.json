@@ -89,6 +89,20 @@
     "buy_price": 0,
     "sell_price": 0
   },
+  "arrowhead_map": {
+    "name": "Arrowhead Map",
+    "description": "A brittle map marked with glacial ridges and a distant island.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
+  "arrowhead_tip": {
+    "name": "Arrow Tip Fragment",
+    "description": "A shard of the bow's power that refused to vanish. It hums like a warning.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
   "relic_shard": {
     "name": "Relic Shard",
     "description": "A fragment of an old carving. Valuable to the Guild/Archivist.",

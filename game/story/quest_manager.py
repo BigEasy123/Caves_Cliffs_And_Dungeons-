@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from game.state import GameState
+from game.state import GameState, STATE
 from game.story.missions import MISSIONS
 from game.enemies import ENEMIES
 from game.items import ITEMS, get_item
 
 
-def mission_objective_text(mission_id: str) -> str:
+def mission_objective_text(mission_id: str, state: GameState | None = None) -> str:
+    state = STATE if state is None else state
     mission = MISSIONS.get(mission_id)
     if mission is None:
         return ""

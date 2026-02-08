@@ -22,9 +22,7 @@ from game.constants import (
 )
 from game.scenes.base import Scene
 from game.state import STATE
-from game.story.flags import FLAG_GOT_TEMPLE_PASS
-from game.story.flags import FLAG_RIVAL_KIDNAPPED
-from game.story.flags import FLAG_BOW_STOLEN
+from game.story.flags import FLAG_BOW_STOLEN, FLAG_FOUND_ARROWHEAD_MAP, FLAG_GOT_TEMPLE_PASS, FLAG_RIVAL_KIDNAPPED
 from game.ui.status_menu import StatusMenu
 from game.world.dungeon_run import DungeonRun
 from game.save import save_slot
@@ -280,6 +278,55 @@ class OutskirtsScene(Scene):
                 "locked": (STATE.chapter < 6 or not STATE.has(FLAG_BOW_STOLEN)),
                 "lock_reason": "After the bow is stolen (Chapter 6), the vault becomes accessible.",
             },
+            {
+                "name": "Ice Expedition Base Camp",
+                "dungeon_id": "_base_camp",
+                "max_floor": 1,
+                "locked": (STATE.chapter < 7),
+                "lock_reason": "Reach Chapter 7 to unlock the ice expedition.",
+            },
+            {
+                "name": "Snowbound Path",
+                "dungeon_id": "snowbound_path",
+                "max_floor": 4,
+                "locked": (STATE.chapter < 7),
+                "lock_reason": "Reach Chapter 7 to unlock.",
+            },
+            {
+                "name": "Ice Cave",
+                "dungeon_id": "ice_cave",
+                "max_floor": 5,
+                "locked": (STATE.chapter < 7),
+                "lock_reason": "Reach Chapter 7 to unlock.",
+            },
+            {
+                "name": "Mt Arot",
+                "dungeon_id": "mt_arot",
+                "max_floor": 6,
+                "locked": (STATE.chapter < 7),
+                "lock_reason": "Reach Chapter 7 to unlock.",
+            },
+            {
+                "name": "Ice Cave (Lower)",
+                "dungeon_id": "ice_cave_2",
+                "max_floor": 6,
+                "locked": (STATE.chapter < 7),
+                "lock_reason": "Reach Chapter 7 to unlock.",
+            },
+            {
+                "name": "Tropic Island Volcano",
+                "dungeon_id": "tropic_volcano",
+                "max_floor": 7,
+                "locked": (STATE.chapter < 8 or not STATE.has(FLAG_FOUND_ARROWHEAD_MAP)),
+                "lock_reason": "Find the map in the ice expedition to unlock.",
+            },
+            {
+                "name": "Journey to the Core",
+                "dungeon_id": "core_descent",
+                "max_floor": 9,
+                "locked": (STATE.chapter < 9),
+                "lock_reason": "Reach Chapter 9 to unlock.",
+            },
         ]
 
     def _handle_dungeon_menu_keys(self, event: pygame.event.Event) -> Scene | None:
@@ -304,13 +351,19 @@ class OutskirtsScene(Scene):
                 self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
 
-            from game.scenes.dungeon import DungeonScene
-
-            run = DungeonRun(dungeon_id=opt["dungeon_id"], dungeon_name=opt["name"], max_floor=opt["max_floor"])
             self.dungeon_menu_open = False
             self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
             save_slot(1)
             self.app.toast("Autosaved (slot 1)")
+
+            if opt["dungeon_id"] == "_base_camp":
+                from game.scenes.base_camp import BaseCampScene
+
+                return BaseCampScene(self.app)
+
+            from game.scenes.dungeon import DungeonScene
+
+            run = DungeonRun(dungeon_id=opt["dungeon_id"], dungeon_name=opt["name"], max_floor=opt["max_floor"])
             return DungeonScene(self.app, run, return_to="outskirts")
         return None
 

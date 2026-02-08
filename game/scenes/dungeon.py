@@ -109,6 +109,10 @@ class DungeonScene(Scene):
         self.floor_sand = load_sprite_variants(PATHS.tiles, prefix="floor_sand", size=(TILE_SIZE, TILE_SIZE)) or self.floor_gravel
         self.floor_mine = load_sprite_variants(PATHS.tiles, prefix="floor_mine", size=(TILE_SIZE, TILE_SIZE)) or self.floor_gravel
         self.floor_babel = load_sprite_variants(PATHS.tiles, prefix="floor_babel", size=(TILE_SIZE, TILE_SIZE)) or self.floor_stone
+        self.floor_snow = load_sprite_variants(PATHS.tiles, prefix="floor_snow", size=(TILE_SIZE, TILE_SIZE)) or self.floor_gravel
+        self.floor_ice = load_sprite_variants(PATHS.tiles, prefix="floor_ice", size=(TILE_SIZE, TILE_SIZE)) or self.floor_snow
+        self.floor_lava = load_sprite_variants(PATHS.tiles, prefix="floor_lava", size=(TILE_SIZE, TILE_SIZE)) or self.floor_sand
+        self.floor_magma = load_sprite_variants(PATHS.tiles, prefix="floor_magma", size=(TILE_SIZE, TILE_SIZE)) or self.floor_stone
         self.wall_rock = load_sprite_variants(PATHS.tiles, prefix="wall_rock", size=(TILE_SIZE, TILE_SIZE)) or load_sprite_variants(
             PATHS.tiles, prefix="wall", size=(TILE_SIZE, TILE_SIZE)
         )
@@ -116,6 +120,8 @@ class DungeonScene(Scene):
         self.wall_sandstone = load_sprite_variants(PATHS.tiles, prefix="wall_sandstone", size=(TILE_SIZE, TILE_SIZE)) or self.wall_stone
         self.wall_mine = load_sprite_variants(PATHS.tiles, prefix="wall_mine", size=(TILE_SIZE, TILE_SIZE)) or self.wall_rock
         self.wall_babel = load_sprite_variants(PATHS.tiles, prefix="wall_babel", size=(TILE_SIZE, TILE_SIZE)) or self.wall_stone
+        self.wall_ice = load_sprite_variants(PATHS.tiles, prefix="wall_ice", size=(TILE_SIZE, TILE_SIZE)) or self.wall_stone
+        self.wall_basalt = load_sprite_variants(PATHS.tiles, prefix="wall_basalt", size=(TILE_SIZE, TILE_SIZE)) or self.wall_rock
         self.special_tiles = {
             TILE_STAIRS_DOWN: try_load_sprite(PATHS.tiles / "stairs_down.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_STAIRS_UP: try_load_sprite(PATHS.tiles / "stairs_up.png", size=(TILE_SIZE, TILE_SIZE)),
@@ -200,6 +206,21 @@ class DungeonScene(Scene):
                     floor_cells.remove((x, y))
                 self.enemies.append(spawn_enemy(boss_id, x=x, y=y, floor=self.run.floor, combat_level=STATE.combat_level, rng=self.rng))
 
+        # Chapter 7â€“9 bosses (story beats on final floors).
+        if self.run.floor >= self.run.max_floor:
+            boss_by_dungeon = {
+                "mt_arot": "ice_colossus",
+                "tropic_volcano": "children_warmaster",
+                "core_descent": "children_high_priest",
+            }
+            boss_id = boss_by_dungeon.get(self.run.dungeon_id)
+            if boss_id and not any(e.enemy_id == boss_id for e in self.enemies):
+                candidates = [c for c in floor_cells if abs(c[0] - self.player.x) + abs(c[1] - self.player.y) >= 8]
+                x, y = (candidates[0] if candidates else (floor_cells[0] if floor_cells else (self.player.x + 2, self.player.y)))
+                if (x, y) in floor_cells:
+                    floor_cells.remove((x, y))
+                self.enemies.append(spawn_enemy(boss_id, x=x, y=y, floor=self.run.floor, combat_level=STATE.combat_level, rng=self.rng))
+
         # A couple simple pickups
         for _ in range(2):
             if not floor_cells:
@@ -240,6 +261,9 @@ class DungeonScene(Scene):
                     continue
                 item_id = str(obj.get("item_id", ""))
                 if not item_id or item_id == "relic_shard":
+                    continue
+                # Boss-granted story items (kept off the random floor-spawn system).
+                if item_id in ("arrowhead_map", "arrowhead_tip"):
                     continue
                 if STATE.item_count(item_id) > 0:
                     continue
@@ -363,6 +387,21 @@ class DungeonScene(Scene):
                         variants = self.floor_babel if (x + y + self.visual_seed) % 6 else self.floor_stone
                     elif self.run.dungeon_id == "jungle_cavern":
                         variants = self.floor_grass if (x + y + self.visual_seed) % 5 else self.floor_mud
+                    elif self.run.dungeon_id in ("snowbound_path", "ice_cave", "ice_cave_2", "mt_arot"):
+                        # Ice biomes: snow early, more ice deeper.
+                        deeper = (self.run.floor >= max(2, self.run.max_floor // 2))
+                        if deeper and (x + y + self.visual_seed) % 4 == 0:
+                            variants = self.floor_ice
+                        else:
+                            variants = self.floor_snow if (x + y + self.visual_seed) % 5 else self.floor_ice
+                    elif self.run.dungeon_id == "tropic_volcano":
+                        # Tropic: sand/green with occasional lava as you descend.
+                        if self.run.floor >= 4 and (x + y + self.visual_seed) % 11 == 0:
+                            variants = self.floor_lava
+                        else:
+                            variants = self.floor_sand if (x + y + self.visual_seed) % 6 else self.floor_grass
+                    elif self.run.dungeon_id == "core_descent":
+                        variants = self.floor_magma if (x + y + self.visual_seed) % 4 else self.floor_stone
                     else:
                         variants = self.floor_stone if (x + y + self.visual_seed) % 7 else self.floor_gravel
                     sprite = pick_variant(variants, x=x, y=y, seed=self.visual_seed)
@@ -376,6 +415,12 @@ class DungeonScene(Scene):
                         wall_variants = self.wall_mine
                     elif self.run.dungeon_id == "babel_tower":
                         wall_variants = self.wall_babel
+                    elif self.run.dungeon_id in ("snowbound_path", "ice_cave", "ice_cave_2", "mt_arot"):
+                        wall_variants = self.wall_ice
+                    elif self.run.dungeon_id == "tropic_volcano":
+                        wall_variants = self.wall_rock
+                    elif self.run.dungeon_id == "core_descent":
+                        wall_variants = self.wall_basalt
                     else:
                         wall_variants = self.wall_rock if self.run.dungeon_id == "jungle_cavern" else self.wall_stone
                     sprite = pick_variant(wall_variants, x=x, y=y, seed=self.visual_seed)
@@ -472,6 +517,18 @@ class DungeonScene(Scene):
         if tile == TILE_DUNGEON_EXIT:
             if self.run.dungeon_id == "nephil_tomb" and any(e.is_alive() and e.enemy_id == "mummy_king" for e in self.enemies):
                 self.message = "A cursed weight seals the exit. Defeat the Mummified King."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
+                return None
+            if self.run.dungeon_id == "mt_arot" and any(e.is_alive() and e.enemy_id == "ice_colossus" for e in self.enemies):
+                self.message = "The mountain groans. The Colossus still stands."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
+                return None
+            if self.run.dungeon_id == "tropic_volcano" and any(e.is_alive() and e.enemy_id == "children_warmaster" for e in self.enemies):
+                self.message = "Heat and steel block the way. Defeat the Warmaster."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
+                return None
+            if self.run.dungeon_id == "core_descent" and any(e.is_alive() and e.enemy_id == "children_high_priest" for e in self.enemies):
+                self.message = "A chant pins you in place. End the High Priest."
                 self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
                 return None
             self._commit_rescues()
@@ -644,8 +701,7 @@ class DungeonScene(Scene):
         enemy.hp = max(0, enemy.hp - damage)
         if enemy.hp <= 0:
             STATE.record_kill(enemy.enemy_id)
-            if enemy.enemy_id == "mummy_king":
-                self._grant_boss_relic_if_needed()
+            self._grant_boss_relic_if_needed(enemy.enemy_id)
             levels = STATE.add_combat_xp(6 + self.run.floor)
             if levels:
                 self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
@@ -692,8 +748,7 @@ class DungeonScene(Scene):
                 self.message = f"Picked up {item.name}."
                 self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
                 self.pickups.pop(idx)
-                if pickup.item_id == "relic_shard":
-                    self._check_missions_progress()
+                self._check_missions_progress()
                 break
 
     def _commit_rescues(self) -> None:
@@ -796,8 +851,7 @@ class DungeonScene(Scene):
             self.app.audio.play_sfx(PATHS.sfx / "shoot.wav", volume=0.4)
             if target.hp <= 0:
                 STATE.record_kill(target.enemy_id)
-                if target.enemy_id == "mummy_king":
-                    self._grant_boss_relic_if_needed()
+                self._grant_boss_relic_if_needed(target.enemy_id)
                 levels = STATE.add_combat_xp(5 + self.run.floor)
                 if levels:
                     self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
@@ -822,8 +876,7 @@ class DungeonScene(Scene):
             self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.55)
             if target.hp <= 0:
                 STATE.record_kill(target.enemy_id)
-                if target.enemy_id == "mummy_king":
-                    self._grant_boss_relic_if_needed()
+                self._grant_boss_relic_if_needed(target.enemy_id)
                 levels = STATE.add_combat_xp(6 + self.run.floor)
                 if levels:
                     self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
@@ -836,21 +889,38 @@ class DungeonScene(Scene):
                 self._check_missions_progress()
             return
 
-    def _grant_boss_relic_if_needed(self) -> None:
+    def _grant_boss_relic_if_needed(self, boss_enemy_id: str) -> None:
         mission_id = STATE.active_mission
         mission = MISSIONS.get(mission_id) if mission_id else None
         if mission is None:
             return
-        needs_crown = any(
-            str(obj.get("type", "")) == "collect_item" and str(obj.get("item_id", "")) == "nephil_relic_crown"
-            for obj in mission.objectives
-        )
-        if not needs_crown or STATE.item_count("nephil_relic_crown") > 0:
+
+        def mission_needs(item_id: str) -> bool:
+            return any(str(o.get("type", "")) == "collect_item" and str(o.get("item_id", "")) == item_id for o in mission.objectives)
+
+        if boss_enemy_id == "mummy_king":
+            if mission_needs("nephil_relic_crown") and STATE.item_count("nephil_relic_crown") <= 0:
+                STATE.add_item("nephil_relic_crown", 1)
+                self.items_gained["nephil_relic_crown"] = self.items_gained.get("nephil_relic_crown", 0) + 1
+                self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
+                self.message += " You claim the Crown of Dust."
             return
-        STATE.add_item("nephil_relic_crown", 1)
-        self.items_gained["nephil_relic_crown"] = self.items_gained.get("nephil_relic_crown", 0) + 1
-        self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
-        self.message += " You claim the Crown of Dust."
+
+        if boss_enemy_id == "ice_colossus":
+            if mission_needs("arrowhead_map") and STATE.item_count("arrowhead_map") <= 0:
+                STATE.add_item("arrowhead_map", 1)
+                self.items_gained["arrowhead_map"] = self.items_gained.get("arrowhead_map", 0) + 1
+                self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
+                self.message += " You recover a frozen map."
+            return
+
+        if boss_enemy_id == "children_warmaster":
+            if mission_needs("arrowhead_tip") and STATE.item_count("arrowhead_tip") <= 0:
+                STATE.add_item("arrowhead_tip", 1)
+                self.items_gained["arrowhead_tip"] = self.items_gained.get("arrowhead_tip", 0) + 1
+                self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
+                self.message += " You seize the Arrow Tip Fragment."
+            return
 
     def _enemy_at_adjacent(self) -> Enemy | None:
         for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
