@@ -4,6 +4,7 @@ from game.constants import COLOR_BG, COLOR_TEXT, TITLE
 from game.assets_manifest import PATHS
 from game.scenes.base import Scene
 from game.state import STATE
+from game.story.flags import FLAG_SEEN_INTRO_CUTSCENE
 
 
 class TitleScene(Scene):
@@ -20,6 +21,11 @@ class TitleScene(Scene):
                     from game.scenes.name_entry import NameEntryScene
 
                     return NameEntryScene(self.app, next_scene=self)
+                if int(getattr(STATE, "chapter", 1)) == 1 and not STATE.has(FLAG_SEEN_INTRO_CUTSCENE):
+                    from game.scenes.home import HomeBaseScene
+                    from game.scenes.intro_cutscene import IntroCutsceneScene
+
+                    return IntroCutsceneScene(self.app, next_scene=HomeBaseScene(self.app))
                 from game.scenes.home import HomeBaseScene
 
                 return HomeBaseScene(self.app)

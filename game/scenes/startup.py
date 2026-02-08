@@ -6,6 +6,7 @@ from game.assets_manifest import PATHS
 from game.save import load_slot, reset_state
 from game.scenes.base import Scene
 from game.state import STATE
+from game.story.flags import FLAG_SEEN_INTRO_CUTSCENE
 
 
 class StartupScene(Scene):
@@ -86,6 +87,10 @@ class StartupScene(Scene):
                 )
             from game.scenes.home import HomeBaseScene
 
+            if int(getattr(STATE, "chapter", 1)) == 1 and not STATE.has(FLAG_SEEN_INTRO_CUTSCENE):
+                from game.scenes.intro_cutscene import IntroCutsceneScene
+
+                return IntroCutsceneScene(self.app, next_scene=HomeBaseScene(self.app))
             return HomeBaseScene(self.app)
         self.app.toast(f"No save in slot {slot}")
         from game.scenes.title import TitleScene
