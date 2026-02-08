@@ -2,6 +2,7 @@ import random
 
 import pygame
 
+from game.anim import StepAnimator
 from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
@@ -22,7 +23,7 @@ from game.constants import (
     TILE_WALL,
     TILE_SIZE,
 )
-from game.assets import try_load_sprite
+from game.assets import load_sprite_variants, pick_variant, try_load_sprite
 from game.enemies import enemy_table_for_dungeon, spawn_enemy
 from game.entities.enemy import Enemy
 from game.entities.pickup import Pickup
@@ -54,15 +55,31 @@ class DungeonScene(Scene):
         self.grid = self._generate_floor()
         self.player = self._spawn_player()
         self._populate_floor()
-        self.player_sprite = try_load_sprite("assets/sprites/player.png", size=(TILE_SIZE, TILE_SIZE))
+        walk_frames = [
+            try_load_sprite(PATHS.sprites / "player_walk0.png", size=(TILE_SIZE, TILE_SIZE)),
+            try_load_sprite(PATHS.sprites / "player_walk1.png", size=(TILE_SIZE, TILE_SIZE)),
+            try_load_sprite(PATHS.sprites / "player_walk2.png", size=(TILE_SIZE, TILE_SIZE)),
+        ]
+        self.player_walk = [f for f in walk_frames if f is not None]
+        self.player_sprite = try_load_sprite(PATHS.sprites / "player.png", size=(TILE_SIZE, TILE_SIZE))
+        self.player_anim = StepAnimator(self.player_walk) if self.player_walk else None
         self.enemy_sprite = try_load_sprite("assets/sprites/enemy.png", size=(TILE_SIZE, TILE_SIZE))
-        self.tiles = {
-            TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
-            TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
+        self.floor_stone = load_sprite_variants(PATHS.tiles, prefix="floor_stone", size=(TILE_SIZE, TILE_SIZE)) or load_sprite_variants(
+            PATHS.tiles, prefix="floor", size=(TILE_SIZE, TILE_SIZE)
+        )
+        self.floor_grass = load_sprite_variants(PATHS.tiles, prefix="floor_grass", size=(TILE_SIZE, TILE_SIZE)) or self.floor_stone
+        self.floor_gravel = load_sprite_variants(PATHS.tiles, prefix="floor_gravel", size=(TILE_SIZE, TILE_SIZE)) or self.floor_stone
+        self.floor_mud = load_sprite_variants(PATHS.tiles, prefix="floor_mud", size=(TILE_SIZE, TILE_SIZE)) or self.floor_gravel
+        self.wall_rock = load_sprite_variants(PATHS.tiles, prefix="wall_rock", size=(TILE_SIZE, TILE_SIZE)) or load_sprite_variants(
+            PATHS.tiles, prefix="wall", size=(TILE_SIZE, TILE_SIZE)
+        )
+        self.wall_stone = load_sprite_variants(PATHS.tiles, prefix="wall_stone", size=(TILE_SIZE, TILE_SIZE)) or self.wall_rock
+        self.special_tiles = {
             TILE_STAIRS_DOWN: try_load_sprite(PATHS.tiles / "stairs_down.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_STAIRS_UP: try_load_sprite(PATHS.tiles / "stairs_up.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_DUNGEON_EXIT: try_load_sprite(PATHS.tiles / "exit.png", size=(TILE_SIZE, TILE_SIZE)),
         }
+        self.visual_seed = self.run.seed_for_floor(self.run.floor) % 100000
         self.message = ""
         self.inventory_open = False
         self.inventory_index = 0
@@ -79,6 +96,7 @@ class DungeonScene(Scene):
 
     def _generate_floor(self) -> list[list[int]]:
         self.rng = random.Random(self.run.seed_for_floor(self.run.floor))
+        self.visual_seed = self.run.seed_for_floor(self.run.floor) % 100000
         grid = generate_dungeon(
             GRID_WIDTH,
             GRID_HEIGHT,
@@ -214,7 +232,22 @@ class DungeonScene(Scene):
                         pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE),
                     )
                     continue
-                sprite = self.tiles.get(cell)
+                if cell == TILE_FLOOR:
+                    if self.run.dungeon_id == "jungle_cavern":
+                        variants = self.floor_grass if (x + y + self.visual_seed) % 5 else self.floor_mud
+                    else:
+                        variants = self.floor_stone if (x + y + self.visual_seed) % 7 else self.floor_gravel
+                    sprite = pick_variant(variants, x=x, y=y, seed=self.visual_seed)
+                    if sprite is not None:
+                        surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
+                        continue
+                if cell == TILE_WALL:
+                    wall_variants = self.wall_rock if self.run.dungeon_id == "jungle_cavern" else self.wall_stone
+                    sprite = pick_variant(wall_variants, x=x, y=y, seed=self.visual_seed)
+                    if sprite is not None:
+                        surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
+                        continue
+                sprite = self.special_tiles.get(cell)
                 if sprite is not None:
                     surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
                     continue
@@ -257,8 +290,9 @@ class DungeonScene(Scene):
 
         px = self.player.x * TILE_SIZE
         py = self.player.y * TILE_SIZE
-        if self.player_sprite is not None:
-            surface.blit(self.player_sprite, (px, py))
+        sprite = self.player_anim.current(self.player_sprite) if self.player_anim is not None else self.player_sprite
+        if sprite is not None:
+            surface.blit(sprite, (px, py))
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
@@ -343,7 +377,10 @@ class DungeonScene(Scene):
             self._player_attack(enemy)
             return True
 
+        prev = (self.player.x, self.player.y)
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
+        if (self.player.x, self.player.y) != prev and self.player_anim is not None:
+            self.player_anim.on_step()
         self._pickup_if_present()
         self.message = ""
         return True

@@ -86,7 +86,19 @@ def _generate_pngs(*, tile_size: int, tiles_dir: Path, sprites_dir: Path, overwr
     tile(tiles_dir / "temple.png", "GATE", Colors((160, 210, 250), (30, 70, 120)), icon="temple", variant=9)
     tile(tiles_dir / "jungle.png", "GATE", Colors((140, 240, 180), (20, 120, 70)), icon="leaf", variant=10)
     tile(tiles_dir / "exit.png", "EXIT", Colors((240, 230, 120), (120, 90, 20)), icon="star", variant=11)
-    tile(tiles_dir / "bed.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed", variant=12)
+    tile(tiles_dir / "bed_tl.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed_tl", variant=12)
+    tile(tiles_dir / "bed_tr.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed_tr", variant=13)
+    tile(tiles_dir / "bed_bl.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed_bl", variant=14)
+    tile(tiles_dir / "bed_br.png", "BED", Colors((170, 120, 210), (80, 40, 120)), icon="bed_br", variant=15)
+
+    # Variants for themed dungeons / nicer towns (no labels by default).
+    for i in range(1, 4):
+        tile(tiles_dir / f"floor_stone{i}.png", f"STONE{i}", Colors((40, 44, 52), (70, 76, 88)), icon="bricks", variant=20 + i)
+        tile(tiles_dir / f"wall_rock{i}.png", f"ROCK{i}", Colors((70, 78, 96), (34, 38, 50)), icon="bricks", variant=30 + i)
+        tile(tiles_dir / f"wall_stone{i}.png", f"WSTONE{i}", Colors((85, 92, 110), (45, 50, 62)), icon="bricks", variant=60 + i)
+        tile(tiles_dir / f"floor_grass{i}.png", f"GRASS{i}", Colors((34, 62, 38), (60, 120, 70)), icon="leaf", variant=40 + i)
+        tile(tiles_dir / f"floor_gravel{i}.png", f"GRAVEL{i}", Colors((60, 56, 48), (110, 105, 95)), icon="dots", variant=50 + i)
+        tile(tiles_dir / f"floor_mud{i}.png", f"MUD{i}", Colors((78, 58, 38), (130, 95, 60)), icon="dots", variant=70 + i)
 
     sprite(sprites_dir / "player.png", "YOU", Colors((240, 210, 80), (110, 80, 20)), icon="person")
     sprite(sprites_dir / "enemy.png", "FOE", Colors((220, 90, 90), (110, 30, 30)), icon="skull")
@@ -148,8 +160,8 @@ def _draw_icon(surf, icon: str, color: tuple[int, int, int]) -> None:
             pygame.draw.rect(surf, (0, 0, 0), pygame.Rect(cx + x - 2, cy + 2, 4, 10))
         return
     if icon == "leaf":
-        pygame.draw.ellipse(surf, color, pygame.Rect(cx - 12, cy - 8, 24, 16))
-        pygame.draw.line(surf, (0, 0, 0), (cx - 10, cy + 6), (cx + 10, cy - 6), 2)
+        pygame.draw.ellipse(surf, color, pygame.Rect(cx - 11, cy - 8, 22, 16))
+        pygame.draw.line(surf, (0, 0, 0), (cx - 9, cy + 6), (cx + 9, cy - 6), 2)
         return
     if icon == "star":
         pts = [
@@ -176,14 +188,30 @@ def _draw_icon(surf, icon: str, color: tuple[int, int, int]) -> None:
         pygame.draw.circle(surf, (0, 0, 0), (cx - 4, cy - 6), 2)
         pygame.draw.circle(surf, (0, 0, 0), (cx + 4, cy - 6), 2)
         return
-    if icon == "bed":
+    if icon.startswith("bed_"):
         import pygame
 
         w, h = surf.get_size()
-        cx, cy = w // 2, h // 2 - 1
-        pygame.draw.rect(surf, color, pygame.Rect(cx - 12, cy - 2, 24, 10), 0, 2)
-        pygame.draw.rect(surf, (0, 0, 0), pygame.Rect(cx - 10, cy, 8, 6), 0, 2)
-        pygame.draw.rect(surf, color, pygame.Rect(cx - 12, cy - 6, 6, 18), 0, 2)
+        # Solid bed as a 2x2 sprite split across tiles.
+        frame = color
+        top = icon.endswith("_tl") or icon.endswith("_tr")
+        left = icon.endswith("_tl") or icon.endswith("_bl")
+        right = icon.endswith("_tr") or icon.endswith("_br")
+        bottom = icon.endswith("_bl") or icon.endswith("_br")
+
+        # Fill
+        pygame.draw.rect(surf, frame, pygame.Rect(1, 1, w - 2, h - 2), 0, 3)
+
+        # Border only on outer edges (so the 2x2 looks like one object)
+        border = (0, 0, 0)
+        if top:
+            pygame.draw.line(surf, border, (1, 1), (w - 2, 1), 2)
+        if bottom:
+            pygame.draw.line(surf, border, (1, h - 2), (w - 2, h - 2), 2)
+        if left:
+            pygame.draw.line(surf, border, (1, 1), (1, h - 2), 2)
+        if right:
+            pygame.draw.line(surf, border, (w - 2, 1), (w - 2, h - 2), 2)
         return
 
 
@@ -224,14 +252,21 @@ def _draw_texture(surf, icon: str, colors: Colors, *, variant: int) -> None:
                     surf.set_at((x, y), shade(colors.bg, -14))
         return
 
-    # Jungle: leafy stripes
+    # Jungle/grass: wispy blades
     if icon == "leaf":
         for y in range(2, h - 2):
             for x in range(2, w - 2):
-                if (x + y + variant) % 7 == 0:
-                    surf.set_at((x, y), shade(colors.bg, 16))
-                elif (x - y) % 11 == 0:
-                    surf.set_at((x, y), shade(colors.bg, -10))
+                n = jitter(x, y)
+                # Sparse light/dark specks
+                if n < 6:
+                    surf.set_at((x, y), shade(colors.bg, 20))
+                elif n > 252:
+                    surf.set_at((x, y), shade(colors.bg, -14))
+                # Wispy diagonal blades
+                if (x * 3 + y * 5 + variant) % 13 == 0 and n < 180:
+                    surf.set_at((x, y), shade(colors.bg, 18))
+                if (x * 5 - y * 3 + variant) % 17 == 0 and n < 140:
+                    surf.set_at((x, y), shade(colors.bg, 10))
         return
 
     # Doors / special: subtle diagonal

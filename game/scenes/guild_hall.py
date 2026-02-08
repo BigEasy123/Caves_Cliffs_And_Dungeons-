@@ -47,6 +47,10 @@ class GuildHallScene(Scene):
             Npc("guild_captain", "Captain", x=GRID_WIDTH // 2 - 6, y=7),
             Npc("guild_quartermaster", "Quartermaster", x=GRID_WIDTH // 2 + 6, y=7),
         ]
+        self.npc_sprites = {
+            npc.npc_id: try_load_sprite(PATHS.sprites / "npcs" / f"{npc.npc_id}_down.png", size=(TILE_SIZE, TILE_SIZE))
+            for npc in self.npcs
+        }
 
         self.dialogue = DialogueBox()
         self.active_lines: list[str] | None = None
@@ -116,11 +120,15 @@ class GuildHallScene(Scene):
         _draw_grid(surface, self.grid, self.tiles)
 
         for npc in self.npcs:
-            pygame.draw.rect(
-                surface,
-                (180, 110, 210),
-                pygame.Rect(npc.x * TILE_SIZE, npc.y * TILE_SIZE, TILE_SIZE, TILE_SIZE),
-            )
+            spr = self.npc_sprites.get(npc.npc_id)
+            if spr is not None:
+                surface.blit(spr, (npc.x * TILE_SIZE, npc.y * TILE_SIZE))
+            else:
+                pygame.draw.rect(
+                    surface,
+                    (180, 110, 210),
+                    pygame.Rect(npc.x * TILE_SIZE, npc.y * TILE_SIZE, TILE_SIZE, TILE_SIZE),
+                )
 
         px = self.player.x * TILE_SIZE
         py = self.player.y * TILE_SIZE
@@ -252,4 +260,3 @@ def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, 
             else:
                 color = COLOR_FLOOR
             pygame.draw.rect(surface, color, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
-

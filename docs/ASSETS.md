@@ -22,7 +22,28 @@ assets/
       temple.png
       jungle.png
       exit.png
-      bed.png
+      bed_tl.png
+      bed_tr.png
+      bed_bl.png
+      bed_br.png
+      floor_stone1.png
+      floor_stone2.png
+      floor_stone3.png
+      wall_rock1.png
+      wall_rock2.png
+      wall_rock3.png
+      floor_grass1.png
+      floor_grass2.png
+      floor_grass3.png
+      floor_gravel1.png
+      floor_gravel2.png
+      floor_gravel3.png
+      floor_mud1.png
+      floor_mud2.png
+      floor_mud3.png
+      wall_stone1.png
+      wall_stone2.png
+      wall_stone3.png
   music/                (optional)
     title.ogg
     home.ogg
@@ -72,3 +93,18 @@ python tools/generate_placeholders.py --overwrite
 ```
 
 This writes PNGs into `assets/sprites/` and `assets/sprites/tiles/`, and WAV files into `assets/sfx/`.
+
+## Generating humanoid sprites + animation (no external tools)
+
+You can also generate a simple human-like player sprite and a 3-frame walk cycle:
+
+```bash
+python tools/generate_humanoids.py --overwrite
+```
+
+Files written:
+- Player (4-way idle + walk):
+  - `assets/sprites/player_down.png`, `player_up.png`, `player_left.png`, `player_right.png`
+  - `assets/sprites/player_walk0_down.png` ... `player_walk2_right.png`
+- NPCs:
+  - `assets/sprites/npcs/<npc_id>_down.png` (and `_up/_left/_right` + walk frames)

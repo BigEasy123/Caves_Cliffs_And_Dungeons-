@@ -1,6 +1,7 @@
 import pygame
 
-from game.assets import try_load_sprite
+from game.anim import DirectionalStepAnimator
+from game.assets import load_sprite_variants, pick_variant, try_load_sprite
 from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
@@ -36,18 +37,50 @@ class OutskirtsScene(Scene):
         self.status_open = False
 
         self.grid = _layout(GRID_WIDTH, GRID_HEIGHT)
+        self.ground = _outskirts_ground(GRID_WIDTH, GRID_HEIGHT)
         sx, sy = spawn if spawn is not None else (3, GRID_HEIGHT // 2)
         from game.entities.player import GridPlayer
 
         self.player = GridPlayer(sx, sy)
+        self.player_idle = {
+            "down": try_load_sprite(PATHS.sprites / "player_down.png", size=(TILE_SIZE, TILE_SIZE)),
+            "up": try_load_sprite(PATHS.sprites / "player_up.png", size=(TILE_SIZE, TILE_SIZE)),
+            "left": try_load_sprite(PATHS.sprites / "player_left.png", size=(TILE_SIZE, TILE_SIZE)),
+            "right": try_load_sprite(PATHS.sprites / "player_right.png", size=(TILE_SIZE, TILE_SIZE)),
+        }
+        self.player_walk = {
+            "down": [try_load_sprite(PATHS.sprites / f"player_walk{i}_down.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "up": [try_load_sprite(PATHS.sprites / f"player_walk{i}_up.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "left": [try_load_sprite(PATHS.sprites / f"player_walk{i}_left.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "right": [try_load_sprite(PATHS.sprites / f"player_walk{i}_right.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+        }
         self.player_sprite = try_load_sprite(PATHS.sprites / "player.png", size=(TILE_SIZE, TILE_SIZE))
-        self.tiles = {
-            TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
-            TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
+        if not any(self.player_idle.values()):
+            self.player_idle["down"] = self.player_sprite
+        try:
+            from game.direction import Direction
+
+            frames_by_dir = {
+                Direction.DOWN: [f for f in self.player_walk["down"] if f is not None],
+                Direction.UP: [f for f in self.player_walk["up"] if f is not None],
+                Direction.LEFT: [f for f in self.player_walk["left"] if f is not None],
+                Direction.RIGHT: [f for f in self.player_walk["right"] if f is not None],
+            }
+            self.player_anim = DirectionalStepAnimator(frames_by_dir) if any(frames_by_dir.values()) else None
+        except Exception:
+            self.player_anim = None
+        self.floor_grass = load_sprite_variants(PATHS.tiles, prefix="floor_grass", size=(TILE_SIZE, TILE_SIZE)) or load_sprite_variants(
+            PATHS.tiles, prefix="floor", size=(TILE_SIZE, TILE_SIZE)
+        )
+        self.floor_gravel = load_sprite_variants(PATHS.tiles, prefix="floor_gravel", size=(TILE_SIZE, TILE_SIZE)) or self.floor_grass
+        self.wall_rock = load_sprite_variants(PATHS.tiles, prefix="wall_rock", size=(TILE_SIZE, TILE_SIZE)) or load_sprite_variants(
+            PATHS.tiles, prefix="wall", size=(TILE_SIZE, TILE_SIZE)
+        )
+        self.special_tiles = {
             TILE_EXIT_HOME: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
-            # Single gate tile (uses temple.png by default).
             TILE_DUNGEON_TEMPLE: try_load_sprite(PATHS.tiles / "temple.png", size=(TILE_SIZE, TILE_SIZE)),
         }
+        self.visual_seed = 303
 
         self.message = ""
         self.dungeon_menu_open = False
@@ -101,12 +134,32 @@ class OutskirtsScene(Scene):
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
-        _draw_grid(surface, self.grid, self.tiles)
+        _draw_grid(
+            surface,
+            self.grid,
+            self.ground,
+            floor_grass=self.floor_grass,
+            floor_gravel=self.floor_gravel,
+            wall_variants=self.wall_rock,
+            special_tiles=self.special_tiles,
+            seed=self.visual_seed,
+        )
 
         px = self.player.x * TILE_SIZE
         py = self.player.y * TILE_SIZE
-        if self.player_sprite is not None:
-            surface.blit(self.player_sprite, (px, py))
+        fallback_by_dir = None
+        if self.player_anim is not None:
+            from game.direction import Direction
+
+            fallback_by_dir = {
+                Direction.DOWN: self.player_idle.get("down") or self.player_sprite,
+                Direction.UP: self.player_idle.get("up") or self.player_sprite,
+                Direction.LEFT: self.player_idle.get("left") or self.player_sprite,
+                Direction.RIGHT: self.player_idle.get("right") or self.player_sprite,
+            }
+        sprite = self.player_anim.current(fallback_by_dir) if self.player_anim is not None else self.player_sprite
+        if sprite is not None:
+            surface.blit(sprite, (px, py))
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
@@ -128,7 +181,10 @@ class OutskirtsScene(Scene):
             self.status_menu.draw(surface, STATE)
 
     def _try_move(self, dx: int, dy: int) -> Scene | None:
+        prev = (self.player.x, self.player.y)
         self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
+        if (self.player.x, self.player.y) != prev and self.player_anim is not None:
+            self.player_anim.on_step(dx, dy)
         tile = self.grid[self.player.y][self.player.x]
         if tile == TILE_EXIT_HOME:
             from game.scenes.town import TownScene
@@ -240,10 +296,31 @@ def _layout(width: int, height: int) -> list[list[int]]:
     return grid
 
 
-def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, pygame.Surface | None]) -> None:
+def _draw_grid(
+    surface: pygame.Surface,
+    grid: list[list[int]],
+    ground: list[list[str]],
+    *,
+    floor_grass: list[pygame.Surface],
+    floor_gravel: list[pygame.Surface],
+    wall_variants: list[pygame.Surface],
+    special_tiles: dict[int, pygame.Surface | None],
+    seed: int,
+) -> None:
     for y, row in enumerate(grid):
         for x, cell in enumerate(row):
-            sprite = tiles.get(cell)
+            if cell == TILE_FLOOR:
+                variants = floor_grass if ground[y][x] == "grass" else floor_gravel
+                sprite = pick_variant(variants, x=x, y=y, seed=seed)
+                if sprite is not None:
+                    surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
+                    continue
+            if cell == TILE_WALL:
+                sprite = pick_variant(wall_variants, x=x, y=y, seed=seed)
+                if sprite is not None:
+                    surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
+                    continue
+            sprite = special_tiles.get(cell)
             if sprite is not None:
                 surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
                 continue
@@ -257,6 +334,17 @@ def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, 
                 color = COLOR_FLOOR
             pygame.draw.rect(surface, color, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
+def _outskirts_ground(width: int, height: int) -> list[list[str]]:
+    ground = [["grass" for _ in range(width)] for _ in range(height)]
+    # Gravel-ish road down the middle
+    cx = width // 2
+    for y in range(1, height - 1):
+        ground[y][cx] = "gravel"
+        if cx - 1 >= 0:
+            ground[y][cx - 1] = "gravel"
+        if cx + 1 < width:
+            ground[y][cx + 1] = "gravel"
+    return ground
 
 def _adjacent_tile(grid: list[list[int]], x: int, y: int) -> int | None:
     for dx, dy in ((0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)):

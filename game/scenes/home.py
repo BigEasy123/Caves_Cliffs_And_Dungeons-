@@ -1,6 +1,7 @@
 import pygame
 
-from game.assets import try_load_sprite
+from game.anim import DirectionalStepAnimator
+from game.assets import load_sprite_variants, pick_variant, try_load_sprite
 from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
@@ -12,7 +13,10 @@ from game.constants import (
     COLOR_WALL,
     GRID_HEIGHT,
     GRID_WIDTH,
-    TILE_BED,
+    TILE_BED_BL,
+    TILE_BED_BR,
+    TILE_BED_TL,
+    TILE_BED_TR,
     TILE_DOOR,
     TILE_FLOOR,
     TILE_SIZE,
@@ -35,13 +39,58 @@ class HomeBaseScene(Scene):
 
         self.grid = _home_layout(GRID_WIDTH, GRID_HEIGHT)
         self.player = GridPlayer(4, 6)
-        self.player_sprite = try_load_sprite("assets/sprites/player.png", size=(TILE_SIZE, TILE_SIZE))
-        self.tiles = {
-            TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
-            TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
-            TILE_DOOR: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
-            TILE_BED: try_load_sprite(PATHS.tiles / "bed.png", size=(TILE_SIZE, TILE_SIZE)),
+        self.player_idle = {
+            "down": try_load_sprite(PATHS.sprites / "player_down.png", size=(TILE_SIZE, TILE_SIZE)),
+            "up": try_load_sprite(PATHS.sprites / "player_up.png", size=(TILE_SIZE, TILE_SIZE)),
+            "left": try_load_sprite(PATHS.sprites / "player_left.png", size=(TILE_SIZE, TILE_SIZE)),
+            "right": try_load_sprite(PATHS.sprites / "player_right.png", size=(TILE_SIZE, TILE_SIZE)),
         }
+        self.player_walk = {
+            "down": [
+                try_load_sprite(PATHS.sprites / f"player_walk{i}_down.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)
+            ],
+            "up": [try_load_sprite(PATHS.sprites / f"player_walk{i}_up.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)],
+            "left": [
+                try_load_sprite(PATHS.sprites / f"player_walk{i}_left.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)
+            ],
+            "right": [
+                try_load_sprite(PATHS.sprites / f"player_walk{i}_right.png", size=(TILE_SIZE, TILE_SIZE)) for i in range(3)
+            ],
+        }
+        # Back-compat (older single-file sprite)
+        self.player_sprite = try_load_sprite(PATHS.sprites / "player.png", size=(TILE_SIZE, TILE_SIZE))
+        if not any(self.player_idle.values()):
+            # Use legacy sprite if directional idles are missing.
+            self.player_idle["down"] = self.player_sprite
+        frames_by_dir = {}
+        try:
+            from game.direction import Direction
+
+            frames_by_dir = {
+                Direction.DOWN: [f for f in self.player_walk["down"] if f is not None],
+                Direction.UP: [f for f in self.player_walk["up"] if f is not None],
+                Direction.LEFT: [f for f in self.player_walk["left"] if f is not None],
+                Direction.RIGHT: [f for f in self.player_walk["right"] if f is not None],
+            }
+            self.player_anim = DirectionalStepAnimator(frames_by_dir) if any(frames_by_dir.values()) else None
+        except Exception:
+            self.player_anim = None
+        self.floor_variants = (
+            load_sprite_variants(PATHS.tiles, prefix="floor_gravel", size=(TILE_SIZE, TILE_SIZE))
+            or load_sprite_variants(PATHS.tiles, prefix="floor", size=(TILE_SIZE, TILE_SIZE))
+        )
+        self.wall_variants = (
+            load_sprite_variants(PATHS.tiles, prefix="wall_rock", size=(TILE_SIZE, TILE_SIZE))
+            or load_sprite_variants(PATHS.tiles, prefix="wall", size=(TILE_SIZE, TILE_SIZE))
+        )
+        self.special_tiles = {
+            TILE_DOOR: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_BED_TL: try_load_sprite(PATHS.tiles / "bed_tl.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_BED_TR: try_load_sprite(PATHS.tiles / "bed_tr.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_BED_BL: try_load_sprite(PATHS.tiles / "bed_bl.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_BED_BR: try_load_sprite(PATHS.tiles / "bed_br.png", size=(TILE_SIZE, TILE_SIZE)),
+        }
+        self.visual_seed = 101
         self._last_pos = (self.player.x, self.player.y)
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
@@ -82,12 +131,14 @@ class HomeBaseScene(Scene):
             prev = (self.player.x, self.player.y)
             self.player.try_move(dx, dy, self.grid, walls={TILE_WALL})
             if (self.player.x, self.player.y) != prev:
+                if self.player_anim is not None:
+                    self.player_anim.on_step(dx, dy)
                 tile = self.grid[self.player.y][self.player.x]
                 if tile == TILE_DOOR:
                     from game.scenes.town import TownScene
 
                     return TownScene(self.app, spawn=(2, GRID_HEIGHT // 2))
-                if tile == TILE_BED:
+                if tile in (TILE_BED_TL, TILE_BED_TR, TILE_BED_BL, TILE_BED_BR):
                     save_slot(1)
                     self.app.toast("Saved at bed (slot 1)")
                     self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
@@ -99,12 +150,30 @@ class HomeBaseScene(Scene):
 
     def draw(self, surface: pygame.Surface) -> None:
         surface.fill(COLOR_BG)
-        _draw_grid(surface, self.grid, self.tiles)
+        _draw_grid(
+            surface,
+            self.grid,
+            floor_variants=self.floor_variants,
+            wall_variants=self.wall_variants,
+            special_tiles=self.special_tiles,
+            seed=self.visual_seed,
+        )
 
         px = self.player.x * TILE_SIZE
         py = self.player.y * TILE_SIZE
-        if self.player_sprite is not None:
-            surface.blit(self.player_sprite, (px, py))
+        fallback_by_dir = None
+        if self.player_anim is not None:
+            from game.direction import Direction
+
+            fallback_by_dir = {
+                Direction.DOWN: self.player_idle.get("down") or self.player_sprite,
+                Direction.UP: self.player_idle.get("up") or self.player_sprite,
+                Direction.LEFT: self.player_idle.get("left") or self.player_sprite,
+                Direction.RIGHT: self.player_idle.get("right") or self.player_sprite,
+            }
+        sprite = self.player_anim.current(fallback_by_dir) if self.player_anim is not None else self.player_sprite
+        if sprite is not None:
+            surface.blit(sprite, (px, py))
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
@@ -132,17 +201,38 @@ def _home_layout(width: int, height: int) -> list[list[int]]:
     door_y = oy + room_h // 2
     grid[door_y][door_x] = TILE_DOOR
 
-    # Bed (save point)
+    # Bed (save point) - 2x2 (four tiles for nicer look)
     bed_x = ox + 2
     bed_y = oy + 2
-    grid[bed_y][bed_x] = TILE_BED
+    grid[bed_y][bed_x] = TILE_BED_TL
+    grid[bed_y][bed_x + 1] = TILE_BED_TR
+    grid[bed_y + 1][bed_x] = TILE_BED_BL
+    grid[bed_y + 1][bed_x + 1] = TILE_BED_BR
     return grid
 
 
-def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, pygame.Surface | None]) -> None:
+def _draw_grid(
+    surface: pygame.Surface,
+    grid: list[list[int]],
+    *,
+    floor_variants: list[pygame.Surface],
+    wall_variants: list[pygame.Surface],
+    special_tiles: dict[int, pygame.Surface | None],
+    seed: int,
+) -> None:
     for y, row in enumerate(grid):
         for x, cell in enumerate(row):
-            sprite = tiles.get(cell)
+            if cell == TILE_FLOOR:
+                sprite = pick_variant(floor_variants, x=x, y=y, seed=seed)
+                if sprite is not None:
+                    surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
+                    continue
+            if cell == TILE_WALL:
+                sprite = pick_variant(wall_variants, x=x, y=y, seed=seed)
+                if sprite is not None:
+                    surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
+                    continue
+            sprite = special_tiles.get(cell)
             if sprite is not None:
                 surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
                 continue
@@ -150,7 +240,7 @@ def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, 
                 color = COLOR_WALL
             elif cell == TILE_DOOR:
                 color = COLOR_DOOR
-            elif cell == TILE_BED:
+            elif cell in (TILE_BED_TL, TILE_BED_TR, TILE_BED_BL, TILE_BED_BR):
                 color = COLOR_BED
             else:
                 color = COLOR_FLOOR

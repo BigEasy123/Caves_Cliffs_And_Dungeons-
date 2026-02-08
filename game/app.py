@@ -7,6 +7,7 @@ from game.audio import Audio
 from game.save import load_slot, reset_state, save_slot
 from game.scenes.base import Scene
 from game.scenes.home import HomeBaseScene
+from game.scenes.startup import StartupScene
 from game.scenes.title import TitleScene
 
 
@@ -23,7 +24,7 @@ class GameApp:
         self.toast_time_left = 0.0
 
         self.running = True
-        self.scene: Scene = TitleScene(self)
+        self.scene: Scene = StartupScene(self)
 
     def set_scene(self, scene: Scene) -> None:
         self.scene = scene
