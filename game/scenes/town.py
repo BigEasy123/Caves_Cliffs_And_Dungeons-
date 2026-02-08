@@ -5,6 +5,7 @@ from game.assets_manifest import PATHS
 from game.constants import (
     COLOR_BG,
     COLOR_DOOR,
+    COLOR_EXIT,
     COLOR_FLOOR,
     COLOR_GUILD,
     COLOR_HEALER,
@@ -15,6 +16,8 @@ from game.constants import (
     GRID_HEIGHT,
     GRID_WIDTH,
     TILE_DOOR,
+    TILE_EXIT_HOME,
+    TILE_EXIT_OUTSKIRTS,
     TILE_FLOOR,
     TILE_GUILD_DOOR,
     TILE_HEALER_DOOR,
@@ -32,18 +35,21 @@ from game.ui.status_menu import StatusMenu
 
 
 class TownScene(Scene):
-    def __init__(self, app) -> None:
+    def __init__(self, app, *, spawn: tuple[int, int] | None = None) -> None:
         super().__init__(app)
         self.font = pygame.font.SysFont(None, 22)
         self.app.audio.play_music(PATHS.music / "town.ogg", volume=0.45)
 
         self.grid = _town_layout(GRID_WIDTH, GRID_HEIGHT)
-        self.player = GridPlayer(12, 10)
+        sx, sy = spawn if spawn is not None else (12, 10)
+        self.player = GridPlayer(sx, sy)
         self.player_sprite = try_load_sprite("assets/sprites/player.png", size=(TILE_SIZE, TILE_SIZE))
         self.tiles = {
             TILE_FLOOR: try_load_sprite(PATHS.tiles / "floor.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_DOOR: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_EXIT_HOME: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_EXIT_OUTSKIRTS: try_load_sprite(PATHS.tiles / "door.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_SHOP_DOOR: try_load_sprite(PATHS.tiles / "shop.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_GUILD_DOOR: try_load_sprite(PATHS.tiles / "guild.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_HEALER_DOOR: try_load_sprite(PATHS.tiles / "healer.png", size=(TILE_SIZE, TILE_SIZE)),
@@ -103,7 +109,7 @@ class TownScene(Scene):
                 self.grid,
                 self.player.x,
                 self.player.y,
-                {TILE_DOOR, TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
+                {TILE_EXIT_HOME, TILE_EXIT_OUTSKIRTS, TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
             )
             if door_tile == TILE_SHOP_DOOR:
                 from game.scenes.shop import ShopScene
@@ -117,10 +123,14 @@ class TownScene(Scene):
                 from game.scenes.healer import HealerScene
 
                 return HealerScene(self.app)
-            if door_tile == TILE_DOOR:
-                from game.scenes.world_map import WorldMapScene
+            if door_tile == TILE_EXIT_HOME:
+                from game.scenes.home import HomeBaseScene
 
-                return WorldMapScene(self.app)
+                return HomeBaseScene(self.app)
+            if door_tile == TILE_EXIT_OUTSKIRTS:
+                from game.scenes.outskirts import OutskirtsScene
+
+                return OutskirtsScene(self.app, spawn=(3, GRID_HEIGHT // 2))
             return None
 
         if dx != 0 or dy != 0:
@@ -148,14 +158,14 @@ class TownScene(Scene):
         else:
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
-        hint = "Town: move WASD/arrows  E: talk/exit  Esc: title"
+        hint = "Town: move WASD/arrows  E: talk/enter/exit  I: status  Esc: title"
         if self._interactable_npc() is not None:
             hint = "Town: E to talk"
         elif _adjacent_tile(
             self.grid,
             self.player.x,
             self.player.y,
-            {TILE_DOOR, TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
+            {TILE_EXIT_HOME, TILE_EXIT_OUTSKIRTS, TILE_SHOP_DOOR, TILE_GUILD_DOOR, TILE_HEALER_DOOR},
         ) is not None:
             hint = "Town: E to enter"
         hud = self.font.render(hint, True, COLOR_TEXT)
@@ -230,7 +240,9 @@ def _town_layout(width: int, height: int) -> list[list[int]]:
     _rect_walls(grid, x1=14, y1=8, x2=21, y2=12)
     grid[12][17] = TILE_HEALER_DOOR
 
-    grid[height // 2][1] = TILE_DOOR
+    # Exits: west to Home Base, east to Outskirts (dungeon entrances)
+    grid[height // 2][1] = TILE_EXIT_HOME
+    grid[height // 2][width - 2] = TILE_EXIT_OUTSKIRTS
     return grid
 
 
@@ -243,8 +255,8 @@ def _draw_grid(surface: pygame.Surface, grid: list[list[int]], tiles: dict[int, 
                 continue
             if cell == TILE_WALL:
                 color = COLOR_WALL
-            elif cell == TILE_DOOR:
-                color = COLOR_DOOR
+            elif cell in (TILE_EXIT_HOME, TILE_EXIT_OUTSKIRTS):
+                color = COLOR_EXIT
             elif cell == TILE_SHOP_DOOR:
                 color = COLOR_SHOP
             elif cell == TILE_GUILD_DOOR:

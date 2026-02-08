@@ -4,7 +4,9 @@ import pygame
 
 from game.constants import FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TITLE
 from game.audio import Audio
+from game.save import load_state, reset_state, save_state
 from game.scenes.base import Scene
+from game.scenes.home import HomeBaseScene
 from game.scenes.title import TitleScene
 
 
@@ -30,6 +32,16 @@ class GameApp:
                 if event.type == pygame.QUIT:
                     self.running = False
                     break
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_F5:
+                        save_state()
+                    elif event.key == pygame.K_F9:
+                        if load_state():
+                            self.set_scene(HomeBaseScene(self))
+                    elif event.key == pygame.K_F8:
+                        reset_state()
+                        self.set_scene(TitleScene(self))
 
                 next_scene = self.scene.handle_event(event)
                 if next_scene is not None:

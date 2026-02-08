@@ -13,6 +13,7 @@ from game.constants import (
     COLOR_STAIRS_UP,
     COLOR_TEXT,
     COLOR_WALL,
+    TILE_DUNGEON_EXIT,
     GRID_HEIGHT,
     GRID_WIDTH,
     TILE_FLOOR,
@@ -22,21 +23,24 @@ from game.constants import (
     TILE_SIZE,
 )
 from game.assets import try_load_sprite
+from game.enemies import enemy_table_for_dungeon, spawn_enemy
 from game.entities.enemy import Enemy
 from game.entities.pickup import Pickup
 from game.entities.player import GridPlayer
 from game.items import ITEMS, get_item
 from game.scenes.base import Scene
 from game.state import STATE
+from game.story.missions import MISSIONS
 from game.world.dungeon_gen import generate_dungeon
 from game.world.dungeon_run import DungeonRun
 
 
 class DungeonScene(Scene):
-    def __init__(self, app, run: DungeonRun) -> None:
+    def __init__(self, app, run: DungeonRun, *, return_to: str = "outskirts") -> None:
         super().__init__(app)
         self.font = pygame.font.SysFont(None, 22)
         self.run = run
+        self.return_to = return_to
         self.app.audio.play_music(PATHS.music / "dungeon.ogg", volume=0.45)
         self.rng = random.Random(self.run.seed_for_floor(self.run.floor))
 
@@ -55,20 +59,29 @@ class DungeonScene(Scene):
             TILE_WALL: try_load_sprite(PATHS.tiles / "wall.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_STAIRS_DOWN: try_load_sprite(PATHS.tiles / "stairs_down.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_STAIRS_UP: try_load_sprite(PATHS.tiles / "stairs_up.png", size=(TILE_SIZE, TILE_SIZE)),
+            TILE_DUNGEON_EXIT: try_load_sprite(PATHS.tiles / "exit.png", size=(TILE_SIZE, TILE_SIZE)),
         }
         self.message = ""
         self.inventory_open = False
         self.inventory_index = 0
+        self.pending_scene: Scene | None = None
+        self.turn = 0
 
     def _generate_floor(self) -> list[list[int]]:
         self.rng = random.Random(self.run.seed_for_floor(self.run.floor))
-        return generate_dungeon(
+        grid = generate_dungeon(
             GRID_WIDTH,
             GRID_HEIGHT,
             seed=self.run.seed_for_floor(self.run.floor),
             place_stairs_up=self.run.floor > 1,
             place_stairs_down=self.run.floor < self.run.max_floor,
         )
+        if self.run.floor >= self.run.max_floor:
+            pos = _find_tile(grid, TILE_FLOOR)
+            if pos is not None:
+                x, y = pos
+                grid[y][x] = TILE_DUNGEON_EXIT
+        return grid
 
     def _spawn_player(self) -> GridPlayer:
         if self.run.floor > 1:
@@ -89,6 +102,7 @@ class DungeonScene(Scene):
         self.rng.shuffle(floor_cells)
 
         enemy_count = max(1, 2 + self.run.floor // 2)
+        table = enemy_table_for_dungeon(self.run.dungeon_id, self.run.floor)
         for _ in range(enemy_count):
             if not floor_cells:
                 break
@@ -97,17 +111,8 @@ class DungeonScene(Scene):
                 continue
             if self.grid[y][x] in (TILE_STAIRS_DOWN, TILE_STAIRS_UP):
                 continue
-            self.enemies.append(
-                Enemy(
-                    enemy_id="raider",
-                    name="Ruins Raider",
-                    x=x,
-                    y=y,
-                    max_hp=6 + self.run.floor * 2,
-                    hp=6 + self.run.floor * 2,
-                    attack=2 + self.run.floor // 2,
-                )
-            )
+            enemy_id = self.rng.choice(table)
+            self.enemies.append(spawn_enemy(enemy_id, x=x, y=y, floor=self.run.floor, rng=self.rng))
 
         # A couple simple pickups
         for _ in range(2):
@@ -124,11 +129,13 @@ class DungeonScene(Scene):
             self.pickups.append(Pickup(item_id="relic_shard", x=x, y=y))
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
+        if self.pending_scene is not None:
+            return self.pending_scene
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                from game.scenes.world_map import WorldMapScene
-
-                return WorldMapScene(self.app)
+                self.message = "You can't leave mid-run. Finish the mission or reach the bottom."
+                return None
 
             if event.key == pygame.K_i:
                 self.inventory_open = not self.inventory_open
@@ -166,6 +173,8 @@ class DungeonScene(Scene):
         return None
 
     def update(self, dt: float) -> Scene | None:
+        if self.pending_scene is not None:
+            return self.pending_scene
         return None
 
     def draw(self, surface: pygame.Surface) -> None:
@@ -223,15 +232,25 @@ class DungeonScene(Scene):
             COLOR_TEXT,
         )
         surface.blit(hud, (10, 8))
+
+        mission_line = self._mission_hud_text()
+        if mission_line:
+            mission = self.font.render(mission_line, True, (200, 200, 210))
+            surface.blit(mission, (10, 32))
+
         if self.message:
             msg = self.font.render(self.message, True, COLOR_TEXT)
-            surface.blit(msg, (10, 32))
+            surface.blit(msg, (10, 56))
 
         if self.inventory_open:
             self._draw_inventory(surface)
 
     def _try_use_stairs(self) -> Scene | None:
         tile = self.grid[self.player.y][self.player.x]
+
+        if tile == TILE_DUNGEON_EXIT:
+            self.message = "You escape the dungeon!"
+            return self._return_scene()
 
         if tile == TILE_STAIRS_DOWN:
             if self.run.floor >= self.run.max_floor:
@@ -242,15 +261,15 @@ class DungeonScene(Scene):
             pos = _find_tile(self.grid, TILE_STAIRS_UP)
             self.player = GridPlayer(*(pos if pos is not None else (1, 1)))
             self._populate_floor()
-            self._check_missions_progress()
+            if self._check_missions_progress():
+                return self.pending_scene
             self.message = ""
             return None
 
         if tile == TILE_STAIRS_UP:
             if self.run.floor <= 1:
-                from game.scenes.world_map import WorldMapScene
-
-                return WorldMapScene(self.app)
+                self.message = "No turning back now."
+                return None
             self.run.floor -= 1
             self.grid = self._generate_floor()
             pos = _find_tile(self.grid, TILE_STAIRS_DOWN) or _find_tile(self.grid, TILE_FLOOR)
@@ -284,18 +303,28 @@ class DungeonScene(Scene):
         if STATE.hp <= 0:
             return
 
+        self.turn += 1
         for enemy in self.enemies:
             if not enemy.is_alive():
                 continue
-            if abs(enemy.x - self.player.x) + abs(enemy.y - self.player.y) == 1:
-                STATE.hp = max(0, STATE.hp - enemy.attack)
-                self.message = f"{enemy.name} hits you for {enemy.attack}."
+            self._update_aggro(enemy)
+            if enemy.aggro_turns <= 0:
+                # Idle wander sometimes
+                if enemy.should_move(self.turn) and self.rng.random() < 0.35:
+                    self._enemy_wander(enemy)
+                continue
+
+            if abs(enemy.x - self.player.x) + abs(enemy.y - self.player.y) == 1 and enemy.should_attack(self.turn):
+                damage = max(1, enemy.attack)
+                STATE.hp = max(0, STATE.hp - damage)
+                self.message = f"{enemy.name} hits you for {damage}."
                 if STATE.hp <= 0:
                     self.message = "You collapse... (Returned to Home Base)"
                     self._handle_player_death()
                 continue
 
-            self._enemy_step_toward(enemy)
+            if enemy.should_move(self.turn):
+                self._enemy_step_toward(enemy)
 
     def _enemy_step_toward(self, enemy: Enemy) -> None:
         dx = 1 if self.player.x > enemy.x else (-1 if self.player.x < enemy.x else 0)
@@ -318,8 +347,22 @@ class DungeonScene(Scene):
             enemy.x, enemy.y = nx, ny
             break
 
+    def _enemy_wander(self, enemy: Enemy) -> None:
+        dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        self.rng.shuffle(dirs)
+        for dx, dy in dirs:
+            nx, ny = enemy.x + dx, enemy.y + dy
+            if self.grid[ny][nx] == TILE_WALL:
+                continue
+            if (nx, ny) == (self.player.x, self.player.y):
+                continue
+            if self._enemy_at(nx, ny) is not None:
+                continue
+            enemy.x, enemy.y = nx, ny
+            break
+
     def _player_attack(self, enemy: Enemy) -> None:
-        damage = 4
+        damage = max(1, 4 - getattr(enemy, "defense", 0))
         enemy.hp = max(0, enemy.hp - damage)
         if enemy.hp <= 0:
             self.message = f"You defeat {enemy.name}!"
@@ -347,9 +390,35 @@ class DungeonScene(Scene):
                 return enemy
         return None
 
+    def _update_aggro(self, enemy: Enemy) -> None:
+        dist = abs(enemy.x - self.player.x) + abs(enemy.y - self.player.y)
+        if dist <= enemy.aggro_range and self._has_simple_los(enemy.x, enemy.y, self.player.x, self.player.y):
+            enemy.aggro_turns = 6
+        else:
+            enemy.aggro_turns = max(0, enemy.aggro_turns - 1)
+
+    def _has_simple_los(self, x1: int, y1: int, x2: int, y2: int) -> bool:
+        # Simple LOS: clear if same row/col with no walls between, else allow within 2 tiles.
+        if x1 == x2:
+            step = 1 if y2 > y1 else -1
+            for y in range(y1 + step, y2, step):
+                if self.grid[y][x1] == TILE_WALL:
+                    return False
+            return True
+        if y1 == y2:
+            step = 1 if x2 > x1 else -1
+            for x in range(x1 + step, x2, step):
+                if self.grid[y1][x] == TILE_WALL:
+                    return False
+            return True
+        return abs(x1 - x2) + abs(y1 - y2) <= 2
+
     def _handle_player_death(self) -> None:
-        # Reset player to a safe state; scene switch happens on next input (Esc or stairs up).
+        # Reset player and send them home immediately.
         STATE.hp = STATE.max_hp
+        from game.scenes.home import HomeBaseScene
+
+        self.pending_scene = HomeBaseScene(self.app)
 
     def _handle_inventory_keys(self, event: pygame.event.Event) -> Scene | None:
         if event.key in (pygame.K_ESCAPE, pygame.K_i):
@@ -390,15 +459,40 @@ class DungeonScene(Scene):
             return
         self.message = f"Used {item.name}."
 
-    def _check_missions_progress(self) -> None:
+    def _check_missions_progress(self) -> bool:
+        completed = False
         if STATE.active_mission == "relic_shard" and STATE.item_count("relic_shard") > 0:
             STATE.completed_missions.add("relic_shard")
             STATE.active_mission = None
             self.message = "Mission complete: Found a Relic Shard!"
+            completed = True
         if STATE.active_mission == "reach_floor_3" and self.run.dungeon_id == "temple_ruins" and self.run.floor >= 3:
             STATE.completed_missions.add("reach_floor_3")
             STATE.active_mission = None
             self.message = "Mission complete: Reached Floor 3!"
+            completed = True
+
+        if completed:
+            self.pending_scene = self._return_scene()
+        return completed
+
+    def _mission_hud_text(self) -> str:
+        mission_id = STATE.active_mission
+        if not mission_id:
+            return ""
+        mission = MISSIONS.get(mission_id)
+        if mission is None:
+            return f"Mission: {mission_id}"
+        return f"Mission: {mission.name} — {mission.description}"
+
+    def _return_scene(self) -> Scene:
+        if self.return_to == "outskirts":
+            from game.scenes.outskirts import OutskirtsScene
+
+            return OutskirtsScene(self.app, spawn=(GRID_WIDTH - 4, GRID_HEIGHT // 2))
+        from game.scenes.town import TownScene
+
+        return TownScene(self.app, spawn=(GRID_WIDTH - 4, GRID_HEIGHT // 2))
 
     def _draw_inventory(self, surface: pygame.Surface) -> None:
         width, height = surface.get_size()

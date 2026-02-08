@@ -58,11 +58,6 @@ class HomeBaseScene(Scene):
         if self.status_open:
             return None
 
-        if event.key == pygame.K_m:
-            from game.scenes.world_map import WorldMapScene
-
-            return WorldMapScene(self.app)
-
         dx, dy = 0, 0
         if event.key in (pygame.K_LEFT, pygame.K_a):
             dx = -1
@@ -74,9 +69,9 @@ class HomeBaseScene(Scene):
             dy = 1
         elif event.key == pygame.K_e:
             if _is_on_or_adjacent(self.grid, self.player.x, self.player.y, TILE_DOOR):
-                from game.scenes.world_map import WorldMapScene
+                from game.scenes.town import TownScene
 
-                return WorldMapScene(self.app)
+                return TownScene(self.app, spawn=(2, GRID_HEIGHT // 2))
             return None
 
         if dx != 0 or dy != 0:
@@ -98,7 +93,7 @@ class HomeBaseScene(Scene):
             pygame.draw.rect(surface, COLOR_PLAYER, pygame.Rect(px, py, TILE_SIZE, TILE_SIZE))
 
         hud = self.font.render(
-            "Home Base: move WASD/arrows  E: exit (at door)  M: World Map  Esc: title",
+            "Home Base: move WASD/arrows  E: exit (at door)  I: status  Esc: title",
             True,
             COLOR_TEXT,
         )
