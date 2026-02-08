@@ -19,6 +19,7 @@ class MissionDef:
     reward_gold: int = 0
     reward_guild_xp: int = 0
     board: str = "guild"  # guild | ice_camp
+    repeatable: bool = False
     reward_items: dict[str, int] = field(default_factory=dict)
     consume_items: dict[str, int] = field(default_factory=dict)
     objectives: list[dict[str, Any]] = field(default_factory=list)
@@ -208,6 +209,7 @@ def _missions_from_json(data: dict[str, Any]) -> dict[str, MissionDef]:
             reward_gold=int(raw.get("reward_gold", 0)),
             reward_guild_xp=int(raw.get("reward_guild_xp", 0)),
             board=str(raw.get("board", "guild")),
+            repeatable=bool(raw.get("repeatable", False)),
             reward_items=dict(raw.get("reward_items", {}) or {}),
             consume_items=dict(raw.get("consume_items", {}) or {}),
             objectives=list(raw.get("objectives", []) or []),

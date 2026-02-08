@@ -9,11 +9,13 @@ from game.ui.dialogue_box import DialogueBox
 from game.ui.status_menu import StatusMenu
 from game.story.flags import (
     FLAG_ARROW_TIP_LOST,
+    FLAG_CHILDREN_EXPERIMENT_SUCCEEDED,
     FLAG_FOUND_ARROWHEAD_MAP,
     FLAG_BOW_DESTROYED,
     FLAG_BOW_STOLEN,
     FLAG_CULT_STOLE_CREDIT,
     FLAG_MET_RECRUIT,
+    FLAG_POSTGAME_UNLOCKED,
     FLAG_RIVAL_KIDNAPPED,
     FLAG_RIVAL_RESCUED,
 )
@@ -90,7 +92,16 @@ class GuildScene(Scene):
                     on_finish=lambda: self._turn_in(mission_id),
                 )
             elif mission_id in STATE.completed_missions:
-                self.message = "Already completed."
+                mission = MISSIONS.get(mission_id)
+                if mission is not None and bool(getattr(mission, "repeatable", False)):
+                    # Allow replay: clear completion/claim markers and re-accept.
+                    STATE.completed_missions.discard(mission_id)
+                    STATE.claimed_missions.discard(mission_id)
+                    STATE.active_mission = mission_id
+                    STATE.mission_kill_baseline = dict(STATE.kill_log)
+                    self._start_dialogue(speaker="Guild Clerk", lines=mission.accept_lines)
+                else:
+                    self.message = "Already completed."
             else:
                 STATE.active_mission = mission_id
                 # Baseline bounty counters so kill-based missions progress from acceptance.
@@ -281,12 +292,21 @@ class GuildScene(Scene):
                 return
             if mission_id == "core_finale":
                 STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 10)
+                STATE.set(FLAG_POSTGAME_UNLOCKED)
+                STATE.set(FLAG_CHILDREN_EXPERIMENT_SUCCEEDED)
                 self._start_dialogue(
                     speaker="Professor",
                     lines=[
                         "The Children fell into their own trap.",
-                        "Whatever wrath swallowed the Nephil has stirred again.",
-                        "For now... come home.",
+                        "Whatever wrath swallowed the Nephil has stirred again... and then went quiet.",
+                        "Now comes the part no one teaches: what you do after the world doesn't end.",
+                        "Do you go back to a normal life... or stay with the Guild?",
+                        "(Either way, the Guild doors stay open to you.)",
+                        "",
+                        "One last report came in before we could breathe:",
+                        "A single experiment of the Children of the Nephil worked.",
+                        "We don't know what it madeâ€”only that it lived.",
+                        "Cliffhanger logged. The next chapter of history is waiting.",
                     ],
                 )
                 return

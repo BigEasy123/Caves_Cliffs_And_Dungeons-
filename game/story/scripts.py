@@ -6,6 +6,7 @@ from typing import Callable
 from game.state import GameState
 from game.story.flags import (
     FLAG_ARROW_TIP_LOST,
+    FLAG_CHILDREN_EXPERIMENT_SUCCEEDED,
     FLAG_FOUND_ARROWHEAD_MAP,
     FLAG_CULT_STOLE_CREDIT,
     FLAG_BOW_DESTROYED,
@@ -153,6 +154,26 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                     "Don't let them wake it.",
                 ],
             )
+        if chapter >= 10:
+            if state.has(FLAG_CHILDREN_EXPERIMENT_SUCCEEDED):
+                return DialogueScript(
+                    speaker="Professor",
+                    lines=[
+                        "Retirement isn't a door. It's a question.",
+                        "If you stay, you shape the Guild. If you leave, you carry the truth out into the world.",
+                        "Either choice is brave.",
+                        "",
+                        "But know this: one Children experiment worked.",
+                        "We don't know what it made. We only know it moved.",
+                    ],
+                )
+            return DialogueScript(
+                speaker="Professor",
+                lines=[
+                    "The world kept turning.",
+                    "So will you, {player}.",
+                ],
+            )
         if chapter <= 3:
             return DialogueScript(
                 speaker="Professor",
@@ -229,6 +250,14 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
         )
 
     if npc_id == "archivist":
+        if chapter >= 10 and state.has(FLAG_CHILDREN_EXPERIMENT_SUCCEEDED):
+            return DialogueScript(
+                speaker="Archivist",
+                lines=[
+                    "When villains fail, they usually fail loudly.",
+                    "The quiet successes are the ones that haunt the margins of history.",
+                ],
+            )
         if chapter >= 7:
             return DialogueScript(
                 speaker="Archivist",

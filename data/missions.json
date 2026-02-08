@@ -430,5 +430,69 @@
     "objectives": [
       { "type": "defeat_enemy", "enemy_id": "children_high_priest", "count": 1 }
     ]
+  },
+  "post_bounty_warmaster": {
+    "name": "Postgame Bounty: Warmaster Remnants",
+    "description": "Leftover warbands are still active. Put them down before they regroup.",
+    "mission_type": "bounty",
+    "min_chapter": 10,
+    "repeatable": true,
+    "accept_lines": [
+      "Rumors say a Warmaster's remnants still roam.",
+      "Defeat 2 Child Enforcers in the Core Descent."
+    ],
+    "turn_in_lines": [
+      "Good.",
+      "History holds its breath a little easier."
+    ],
+    "reward_gold": 180,
+    "reward_guild_xp": 160,
+    "reward_items": { "potion_medium": 1 },
+    "objectives": [
+      { "type": "defeat_enemy", "enemy_id": "children_enforcer", "count": 2 }
+    ]
+  },
+  "post_bounty_ice": {
+    "name": "Postgame Bounty: Ice Stalkers",
+    "description": "Base Camp supply lines are being hit. Clear the trail again.",
+    "mission_type": "bounty",
+    "min_chapter": 10,
+    "repeatable": true,
+    "board": "ice_camp",
+    "accept_lines": [
+      "The snowbound trail is hostile again.",
+      "Defeat 5 Ice Wolves."
+    ],
+    "turn_in_lines": [
+      "Supplies can move again.",
+      "Don't get complacent in the cold."
+    ],
+    "reward_gold": 140,
+    "reward_guild_xp": 130,
+    "reward_items": { "antidote": 1 },
+    "objectives": [
+      { "type": "defeat_enemy", "enemy_id": "ice_wolf", "count": 5 }
+    ]
+  },
+  "post_recon_volcano": {
+    "name": "Postgame Recon: Volcano Pass",
+    "description": "Re-enter the volcano and confirm the chamber remains sealed.",
+    "mission_type": "escort",
+    "min_chapter": 10,
+    "repeatable": true,
+    "accept_lines": [
+      "No one wants to go back in there.",
+      "Reach Floor 5 of the Tropic Island Volcano and return."
+    ],
+    "turn_in_lines": [
+      "Still sealed. Good.",
+      "For now."
+    ],
+    "reward_gold": 160,
+    "reward_guild_xp": 150,
+    "reward_items": { "potion_medium": 1 },
+    "objectives": [
+      { "type": "reach_floor", "dungeon_id": "tropic_volcano", "floor": 5 }
+    ]
   }
 }
