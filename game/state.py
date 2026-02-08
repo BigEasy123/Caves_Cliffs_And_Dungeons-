@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 @dataclass
 class GameState:
     flags: set[str] = field(default_factory=set)
+    player_name: str = ""
     gold: int = 50
     # Base stats (equipment bonuses are applied via helper methods).
     max_hp: int = 20

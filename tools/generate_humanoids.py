@@ -44,6 +44,9 @@ def main() -> int:
     npc_ids = [
         "mayor",
         "archivist",
+        "professor",
+        "guard",
+        "scout",
         "guild_clerk",
         "guild_captain",
         "guild_quartermaster",
@@ -170,4 +173,3 @@ def _palette_from_id(key: str) -> Palette:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -30,6 +30,7 @@ class StatusMenu:
         y = rect.top + 60
 
         lines = [
+            f"Name: {(state.player_name or '').strip() or '-'}",
             f"HP: {state.hp}/{state.max_hp_total()}",
             f"ATK: {state.attack()}  DEF: {state.defense()}",
             f"Gold: {state.gold}",

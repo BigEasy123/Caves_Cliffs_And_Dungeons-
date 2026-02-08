@@ -8,7 +8,7 @@ from typing import Any
 from game.state import GameState, STATE
 
 
-SAVE_VERSION = 2
+SAVE_VERSION = 3
 DEFAULT_SAVE_PATH = Path("saves/save1.json")
 
 
@@ -30,6 +30,7 @@ def load_state(path: str | Path = DEFAULT_SAVE_PATH, state: GameState = STATE) -
 
 def reset_state(state: GameState = STATE) -> None:
     state.flags.clear()
+    state.player_name = ""
     state.gold = 50
     state.max_hp = 20
     state.hp = 20
@@ -76,6 +77,7 @@ def _apply_state(state: GameState, payload: dict[str, Any]) -> None:
 
     data = payload.get("state", {})
     state.flags = set(data.get("flags", []))
+    state.player_name = str(data.get("player_name", ""))[:24]
     state.gold = int(data.get("gold", 50))
     state.max_hp = int(data.get("max_hp", 20))
     state.hp = int(data.get("hp", state.max_hp))

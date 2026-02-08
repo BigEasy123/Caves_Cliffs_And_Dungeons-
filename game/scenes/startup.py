@@ -3,8 +3,9 @@ import pygame
 from pathlib import Path
 
 from game.assets_manifest import PATHS
-from game.save import load_slot
+from game.save import load_slot, reset_state
 from game.scenes.base import Scene
+from game.state import STATE
 
 
 class StartupScene(Scene):
@@ -32,14 +33,18 @@ class StartupScene(Scene):
             if event.key == pygame.K_3 and self.available[3]:
                 return self._load_then_home(3)
             if event.key in (pygame.K_n, pygame.K_RETURN, pygame.K_KP_ENTER):
+                reset_state()
+                from game.scenes.name_entry import NameEntryScene
                 from game.scenes.title import TitleScene
 
-                return TitleScene(self.app)
+                return NameEntryScene(self.app, next_scene=TitleScene(self.app))
         else:
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                reset_state()
+                from game.scenes.name_entry import NameEntryScene
                 from game.scenes.title import TitleScene
 
-                return TitleScene(self.app)
+                return NameEntryScene(self.app, next_scene=TitleScene(self.app))
 
         return None
 
@@ -69,6 +74,16 @@ class StartupScene(Scene):
         ok = load_slot(slot)
         if ok:
             self.app.toast(f"Loaded (slot {slot})")
+            if not (STATE.player_name or "").strip():
+                from game.scenes.name_entry import NameEntryScene
+                from game.scenes.home import HomeBaseScene
+
+                return NameEntryScene(
+                    self.app,
+                    next_scene=HomeBaseScene(self.app),
+                    prompt="Enter your name (save was missing it)",
+                    autosave_slot=slot,
+                )
             from game.scenes.home import HomeBaseScene
 
             return HomeBaseScene(self.app)

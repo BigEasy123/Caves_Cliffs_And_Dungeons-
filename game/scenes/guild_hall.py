@@ -22,6 +22,7 @@ from game.entities.npc import Npc
 from game.entities.player import GridPlayer
 from game.scenes.base import Scene
 from game.state import STATE
+from game.story.scripts import format_dialogue_line, script_for_npc
 from game.ui.dialogue_box import DialogueBox
 from game.ui.status_menu import StatusMenu
 
@@ -73,6 +74,7 @@ class GuildHallScene(Scene):
             Npc("guild_clerk", "Clerk", x=GRID_WIDTH // 2, y=4),
             Npc("guild_captain", "Captain", x=GRID_WIDTH // 2 - 6, y=7),
             Npc("guild_quartermaster", "Quartermaster", x=GRID_WIDTH // 2 + 6, y=7),
+            Npc("professor", "Professor", x=GRID_WIDTH // 2, y=1),
         ]
         self.npc_sprites = {
             npc.npc_id: try_load_sprite(PATHS.sprites / "npcs" / f"{npc.npc_id}_down.png", size=(TILE_SIZE, TILE_SIZE))
@@ -217,13 +219,29 @@ class GuildHallScene(Scene):
         return None
 
     def _start_npc_dialogue(self, npc_id: str, name: str) -> None:
-        if npc_id == "guild_clerk":
-            lines = [
-                "Need work? The board is open.",
-                "I'll show you the available missions.",
-            ]
-            self._start_dialogue(name, lines, on_finish=self._open_board)
+        chapter = int(getattr(STATE, "chapter", 1))
+
+        if npc_id == "professor":
+            script = script_for_npc("professor", STATE)
+            if script is None:
+                return
+            self._start_dialogue(name, [format_dialogue_line(l, STATE) for l in script.lines], on_finish=script.on_finish)
             return
+
+        if npc_id == "guild_clerk":
+            if chapter >= 4:
+                lines = [
+                    "Contracts are getting stranger. More redactions. More silence.",
+                    "Still. Work is work. Let's see what's posted.",
+                ]
+            else:
+                lines = [
+                    "Need work? The board is open.",
+                    "I'll show you the available missions.",
+                ]
+            self._start_dialogue(name, [format_dialogue_line(l, STATE) for l in lines], on_finish=self._open_board)
+            return
+
         if npc_id == "guild_captain":
             if STATE.active_mission:
                 lines = [
@@ -235,14 +253,18 @@ class GuildHallScene(Scene):
                     "We take contracts seriously.",
                     "Pick a mission from the clerk when you're ready.",
                 ]
-            self._start_dialogue(name, lines)
+            if chapter >= 6:
+                lines.append("Word is the cult is moving pieces across borders. Stay mobile.")
+            self._start_dialogue(name, [format_dialogue_line(l, STATE) for l in lines])
             return
+
         if npc_id == "guild_quartermaster":
-            lines = [
-                "If you're low on supplies, check the shop.",
-                "And don't forget—gear matters. A good jacket can save your life.",
-            ]
-            self._start_dialogue(name, lines)
+            lines = ["If you're low on supplies, check the shop."]
+            if chapter >= 2:
+                lines.append("Bring antidotes into the jungle. Poison doesn't care how brave you are.")
+            else:
+                lines.append("And don't forget—gear matters. A good jacket can save your life.")
+            self._start_dialogue(name, [format_dialogue_line(l, STATE) for l in lines])
             return
 
     def _start_dialogue(self, speaker: str, lines: list[str], *, on_finish=None) -> None:

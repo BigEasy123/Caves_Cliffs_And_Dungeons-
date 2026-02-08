@@ -1,3 +1,5 @@
 FLAG_MET_MAYOR = "met_mayor"
 FLAG_GOT_TEMPLE_PASS = "got_temple_pass"
-
+FLAG_MET_PROFESSOR = "met_professor"
+FLAG_MET_GUARD = "met_guard"
+FLAG_MET_SCOUT = "met_scout"

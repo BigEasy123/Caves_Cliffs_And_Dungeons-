@@ -3,6 +3,7 @@ import pygame
 from game.constants import COLOR_BG, COLOR_TEXT, TITLE
 from game.assets_manifest import PATHS
 from game.scenes.base import Scene
+from game.state import STATE
 
 
 class TitleScene(Scene):
@@ -15,6 +16,10 @@ class TitleScene(Scene):
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                if not (STATE.player_name or "").strip():
+                    from game.scenes.name_entry import NameEntryScene
+
+                    return NameEntryScene(self.app, next_scene=self)
                 from game.scenes.home import HomeBaseScene
 
                 return HomeBaseScene(self.app)

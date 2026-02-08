@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 CHAPTER_TITLES: list[str] = [
-    "Beginnings",
+    "Origins",
     "The Grand Search",
     "Cave-in",
     "Rivalry",
@@ -18,4 +18,3 @@ CHAPTER_TITLES: list[str] = [
 def chapter_title(chapter: int) -> str:
     idx = max(1, min(len(CHAPTER_TITLES), int(chapter))) - 1
     return CHAPTER_TITLES[idx]
-

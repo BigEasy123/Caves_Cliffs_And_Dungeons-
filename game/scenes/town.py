@@ -32,7 +32,7 @@ from game.entities.npc import Npc
 from game.entities.player import GridPlayer
 from game.scenes.base import Scene
 from game.state import STATE
-from game.story.scripts import script_for_npc
+from game.story.scripts import format_dialogue_script, script_for_npc
 from game.ui.dialogue_box import DialogueBox
 from game.ui.status_menu import StatusMenu
 
@@ -94,10 +94,16 @@ class TownScene(Scene):
         self.npcs = [
             Npc("mayor", "Mayor", x=7, y=4),
             Npc("archivist", "Archivist", x=12, y=8),
+            Npc("professor", "Professor", x=9, y=4),
+            Npc("guard", "Guard", x=3, y=GRID_HEIGHT // 2),
+            Npc("scout", "Scout", x=GRID_WIDTH - 4, y=GRID_HEIGHT // 2),
         ]
         self.npc_sprites = {
             "mayor": _try_load_npc(PATHS.sprites / "npcs", "mayor", size=(TILE_SIZE, TILE_SIZE)),
             "archivist": _try_load_npc(PATHS.sprites / "npcs", "archivist", size=(TILE_SIZE, TILE_SIZE)),
+            "professor": _try_load_npc(PATHS.sprites / "npcs", "professor", size=(TILE_SIZE, TILE_SIZE)),
+            "guard": _try_load_npc(PATHS.sprites / "npcs", "guard", size=(TILE_SIZE, TILE_SIZE)),
+            "scout": _try_load_npc(PATHS.sprites / "npcs", "scout", size=(TILE_SIZE, TILE_SIZE)),
         }
         self.dialogue = DialogueBox()
         self.status_menu = StatusMenu()
@@ -236,6 +242,7 @@ class TownScene(Scene):
         script = script_for_npc(npc.npc_id, STATE)
         if script is None:
             return False
+        script = format_dialogue_script(script, STATE)
         self.active_script = script
         self.active_line_index = 0
         return True
