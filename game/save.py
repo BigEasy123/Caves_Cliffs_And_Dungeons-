@@ -8,7 +8,7 @@ from typing import Any
 from game.state import GameState, STATE
 
 
-SAVE_VERSION = 3
+SAVE_VERSION = 5
 DEFAULT_SAVE_PATH = Path("saves/save1.json")
 
 
@@ -48,6 +48,12 @@ def reset_state(state: GameState = STATE) -> None:
     state.active_mission = None
     state.kill_log.clear()
     state.mission_kill_baseline.clear()
+    state.rescued_miners_total = 0
+    state.missions_turned_in_total = 0
+    state.relics_turned_in_total = 0
+    state.rival_missions = 0
+    state.rival_relics = 0
+    state.rival_rescues = 0
     state.guard_turns = 0
     state.poison_turns = 0
     state.poison_damage = 0
@@ -96,6 +102,12 @@ def _apply_state(state: GameState, payload: dict[str, Any]) -> None:
     state.active_mission = data.get("active_mission", None)
     state.kill_log = {str(k): int(v) for k, v in (data.get("kill_log", {}) or {}).items()}
     state.mission_kill_baseline = {str(k): int(v) for k, v in (data.get("mission_kill_baseline", {}) or {}).items()}
+    state.rescued_miners_total = int(data.get("rescued_miners_total", 0))
+    state.missions_turned_in_total = int(data.get("missions_turned_in_total", 0))
+    state.relics_turned_in_total = int(data.get("relics_turned_in_total", 0))
+    state.rival_missions = int(data.get("rival_missions", 0))
+    state.rival_relics = int(data.get("rival_relics", 0))
+    state.rival_rescues = int(data.get("rival_rescues", 0))
     state.guard_turns = int(data.get("guard_turns", 0))
     state.poison_turns = int(data.get("poison_turns", 0))
     state.poison_damage = int(data.get("poison_damage", 0))

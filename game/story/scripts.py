@@ -4,7 +4,22 @@ from dataclasses import dataclass
 from typing import Callable
 
 from game.state import GameState
-from game.story.flags import FLAG_GOT_TEMPLE_PASS, FLAG_MET_GUARD, FLAG_MET_MAYOR, FLAG_MET_PROFESSOR, FLAG_MET_SCOUT
+from game.story.flags import (
+    FLAG_CULT_STOLE_CREDIT,
+    FLAG_BOW_DESTROYED,
+    FLAG_BOW_STOLEN,
+    FLAG_GOT_TEMPLE_PASS,
+    FLAG_MET_GUARD,
+    FLAG_MET_MAYOR,
+    FLAG_MET_PROFESSOR,
+    FLAG_MET_RECRUIT,
+    FLAG_MET_SCOUT,
+    FLAG_MET_TA1,
+    FLAG_MET_TA2,
+    FLAG_RIVAL_KIDNAPPED,
+    FLAG_RIVAL_RESCUED,
+)
+from game.story.factions import CHILDREN_OF_THE_NEPHIL
 
 
 @dataclass(frozen=True)
@@ -50,12 +65,41 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                     "I know you feel stuck—tired, behind, invisible. But your mind isn't dull. It's starving.",
                     "I can keep you enrolled… if you study abroad with us.",
                     "We call it the Guild. Officially, we fund expeditions. Unofficially… we protect history itself.",
-                    "There's a cult trying to corrupt the timeline—turning humanity back toward the stone ages, one fracture at a time.",
+                    f"There's a society trying to corrupt the timeline—{CHILDREN_OF_THE_NEPHIL}.",
+                    "They want to send humanity back toward the stone ages, one fracture at a time.",
                     "If you join, you won't just learn history. You'll defend it.",
                 ],
                 on_finish=lambda s: s.set(FLAG_MET_PROFESSOR),
             )
-        if chapter <= 2:
+        if chapter == 2:
+            return DialogueScript(
+                speaker="Professor",
+                lines=[
+                    "You're in, officially. That means you get the truth—and the burden.",
+                    "The desert reports are real. A lost civilization: the Nephil.",
+                    f"Three relics. One {CHILDREN_OF_THE_NEPHIL}. And giants waking up in the sand.",
+                    f"Take contracts from the clerk. Bring back relics before {CHILDREN_OF_THE_NEPHIL} can rewrite them.",
+                ],
+            )
+        if chapter == 3:
+            return DialogueScript(
+                speaker="Professor",
+                lines=[
+                    "New distress call. A remote mine collapsed—dozens trapped.",
+                    f"{CHILDREN_OF_THE_NEPHIL} rushed in first, wearing kindness like a costume.",
+                    "Rescue as many as you can. Bring them home. And watch your back.",
+                ],
+            )
+        if chapter == 4:
+            return DialogueScript(
+                speaker="Professor",
+                lines=[
+                    "Rivalries can sharpen you… or split you in half.",
+                    f"If {CHILDREN_OF_THE_NEPHIL} grabs a weakness, they'll use it.",
+                    "If your 'friend' goes missing, you bring them back. Understood?",
+                ],
+            )
+        if chapter <= 3:
             return DialogueScript(
                 speaker="Professor",
                 lines=[
@@ -95,6 +139,15 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                 lines=[
                     "Floor 3? Then the stories are true...",
                     "Check in at the Guild. They'll want a report—and you deserve your pay.",
+                ],
+            )
+        if state.has(FLAG_CULT_STOLE_CREDIT):
+            return DialogueScript(
+                speaker="Mayor",
+                lines=[
+                    f"They say {CHILDREN_OF_THE_NEPHIL} saved the miners. That's what the papers say.",
+                    "But you look like someone who carried people through darkness.",
+                    "If you need allies, the Guild will listen—eventually.",
                 ],
             )
         if chapter >= 4:
@@ -138,6 +191,14 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                     "If you find symbols that repeat, sketch them. Patterns are where the truth hides.",
                 ],
             )
+        if chapter == 2:
+            return DialogueScript(
+                speaker="Archivist",
+                lines=[
+                    "Nephil? I've only seen the name in contested fragments.",
+                    "Three relics is never just archaeology. It's ritual.",
+                ],
+            )
         return DialogueScript(
             speaker="Archivist",
             lines=[
@@ -160,7 +221,7 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
             return DialogueScript(
                 speaker="Guard",
                 lines=[
-                    "You hear about that cult? Folks call them 'the Regressors'.",
+                    f"Folks whisper about {CHILDREN_OF_THE_NEPHIL}.",
                     "If you see torches that burn cold… run.",
                 ],
             )
@@ -185,5 +246,110 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                 ],
             )
         return DialogueScript(speaker="Scout", lines=["Bring back notes. Not trophies."])
+
+    if npc_id == "recruit":
+        if int(getattr(state, "chapter", 1)) < 5:
+            return None
+        if state.has(FLAG_BOW_DESTROYED):
+            return None
+        if state.has(FLAG_BOW_STOLEN):
+            return DialogueScript(
+                speaker="New Recruit",
+                lines=[
+                    "(The recruit is gone. Only dust remains where they stood.)",
+                ],
+            )
+        if not state.has(FLAG_MET_RECRUIT):
+            return DialogueScript(
+                speaker="New Recruit",
+                lines=[
+                    "Hey. I'm new too—guess we're both trying to prove ourselves.",
+                    "If you find anything important in that tower, bring it straight here. No detours.",
+                ],
+                on_finish=lambda s: s.set(FLAG_MET_RECRUIT),
+            )
+        return DialogueScript(
+            speaker="New Recruit",
+            lines=[
+                "That tower gives me a headache.",
+                "Still… artifacts are artifacts. Bring them back fast.",
+            ],
+        )
+
+    if npc_id == "ta_ren":
+        if not state.has(FLAG_MET_TA1):
+            return DialogueScript(
+                speaker="Ren (TA)",
+                lines=[
+                    "Hey! You're Professor's new recruit, right?",
+                    "I'm Ren—his TA. If you need notes or a friendly face, find me.",
+                ],
+                on_finish=lambda s: s.set(FLAG_MET_TA1),
+            )
+        if chapter == 2:
+            return DialogueScript(
+                speaker="Ren (TA)",
+                lines=[
+                    "So you're official now. About time.",
+                    "If you bring back anything Nephil, label it. The Professor pretends he doesn't care—he does.",
+                ],
+            )
+        return DialogueScript(speaker="Ren (TA)", lines=["Stay alive, {player}. That's my whole request."])
+
+    if npc_id == "ta_lena":
+        if not state.has(FLAG_MET_TA2):
+            return DialogueScript(
+                speaker="Lena (TA)",
+                lines=[
+                    "I heard you were joining the Guild.",
+                    "I'm Lena. Professor trusts you, so… I will too.",
+                ],
+                on_finish=lambda s: s.set(FLAG_MET_TA2),
+            )
+        if chapter == 1:
+            return DialogueScript(
+                speaker="Lena (TA)",
+                lines=[
+                    "You're not a loser. You're just lost.",
+                    "Go do one small brave thing. Then another.",
+                ],
+            )
+        if chapter >= 3 and state.has(FLAG_CULT_STOLE_CREDIT):
+            return DialogueScript(
+                speaker="Lena (TA)",
+                lines=[
+                    "They stole the rescue story. I know.",
+                    "Don't burn yourself out trying to prove the truth. We'll help you show it.",
+                ],
+            )
+        return DialogueScript(speaker="Lena (TA)", lines=["Guild politics are messy. Keep your compass internal."])
+
+    if npc_id == "rival":
+        if chapter < 4:
+            return None
+        if state.has(FLAG_RIVAL_KIDNAPPED) and not state.has(FLAG_RIVAL_RESCUED):
+            return DialogueScript(
+                speaker="Rival",
+                lines=[
+                    "(Your rival is nowhere to be found.)",
+                    f"A note reads: '{CHILDREN_OF_THE_NEPHIL} send their regards.'",
+                ],
+            )
+        if state.has(FLAG_RIVAL_RESCUED):
+            return DialogueScript(
+                speaker="Rival",
+                lines=[
+                    "…I owe you one. Don't get used to hearing that.",
+                    "Those 'Children' weren't rescuers. They were hunting.",
+                ],
+            )
+        return DialogueScript(
+            speaker="Rival",
+            lines=[
+                "Look who it is. Professor's favorite.",
+                "Let's make it interesting: missions, relics, rescues. Whoever does more wins.",
+                "Try to keep up, {player}.",
+            ],
+        )
 
     return None

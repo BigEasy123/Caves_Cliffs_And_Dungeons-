@@ -30,6 +30,10 @@ def mission_objective_text(mission_id: str) -> str:
         count = int(obj.get("count", 1))
         name = ENEMIES[enemy_id].name if enemy_id in ENEMIES else enemy_id
         return f"Defeat: {name} x{count}"
+    if t == "rescue_miners":
+        count = int(obj.get("count", 1))
+        have = int(getattr(state, "rescued_miners_total", 0))
+        return f"Rescue miners: {have}/{count}"
     return mission.description
 
 
@@ -72,5 +76,9 @@ def _objective_complete(
         count = int(obj.get("count", 1))
         base = int((state.mission_kill_baseline or {}).get(enemy_id, 0))
         have = int((state.kill_log or {}).get(enemy_id, 0)) - base
+        return have >= count
+    if t == "rescue_miners":
+        count = int(obj.get("count", 1))
+        have = int(getattr(state, "rescued_miners_total", 0))
         return have >= count
     return False

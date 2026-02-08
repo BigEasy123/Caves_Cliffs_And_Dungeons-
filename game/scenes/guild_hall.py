@@ -22,6 +22,7 @@ from game.entities.npc import Npc
 from game.entities.player import GridPlayer
 from game.scenes.base import Scene
 from game.state import STATE
+from game.story.flags import FLAG_RIVAL_KIDNAPPED, FLAG_RIVAL_RESCUED
 from game.story.scripts import format_dialogue_line, script_for_npc
 from game.ui.dialogue_box import DialogueBox
 from game.ui.status_menu import StatusMenu
@@ -70,12 +71,17 @@ class GuildHallScene(Scene):
             TILE_DOOR: try_load_sprite(PATHS.tiles / "guild.png", size=(TILE_SIZE, TILE_SIZE)),
         }
 
+        chapter = int(getattr(STATE, "chapter", 1))
         self.npcs = [
             Npc("guild_clerk", "Clerk", x=GRID_WIDTH // 2, y=4),
             Npc("guild_captain", "Captain", x=GRID_WIDTH // 2 - 6, y=7),
             Npc("guild_quartermaster", "Quartermaster", x=GRID_WIDTH // 2 + 6, y=7),
             Npc("professor", "Professor", x=GRID_WIDTH // 2, y=1),
         ]
+        if chapter in (5, 6):
+            self.npcs.append(Npc("recruit", "New Recruit", x=GRID_WIDTH // 2 + 7, y=4))
+        if chapter >= 4 and (not STATE.has(FLAG_RIVAL_KIDNAPPED) or STATE.has(FLAG_RIVAL_RESCUED)):
+            self.npcs.append(Npc("rival", "Rival", x=GRID_WIDTH // 2 - 8, y=4))
         self.npc_sprites = {
             npc.npc_id: try_load_sprite(PATHS.sprites / "npcs" / f"{npc.npc_id}_down.png", size=(TILE_SIZE, TILE_SIZE))
             for npc in self.npcs
@@ -228,6 +234,20 @@ class GuildHallScene(Scene):
             self._start_dialogue(name, [format_dialogue_line(l, STATE) for l in script.lines], on_finish=script.on_finish)
             return
 
+        if npc_id == "rival":
+            script = script_for_npc("rival", STATE)
+            if script is None:
+                return
+            self._start_dialogue(name, [format_dialogue_line(l, STATE) for l in script.lines], on_finish=script.on_finish)
+            return
+
+        if npc_id == "recruit":
+            script = script_for_npc("recruit", STATE)
+            if script is None:
+                return
+            self._start_dialogue(name, [format_dialogue_line(l, STATE) for l in script.lines], on_finish=script.on_finish)
+            return
+
         if npc_id == "guild_clerk":
             if chapter >= 4:
                 lines = [
@@ -254,7 +274,7 @@ class GuildHallScene(Scene):
                     "Pick a mission from the clerk when you're ready.",
                 ]
             if chapter >= 6:
-                lines.append("Word is the cult is moving pieces across borders. Stay mobile.")
+                lines.append("Word is the Children are moving pieces across borders. Stay mobile.")
             self._start_dialogue(name, [format_dialogue_line(l, STATE) for l in lines])
             return
 

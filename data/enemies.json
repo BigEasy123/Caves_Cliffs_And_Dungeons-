@@ -56,6 +56,120 @@
     "behavior": "poison_melee",
     "poison_turns": 3,
     "poison_damage": 1
+  },
+  "giant_scout": {
+    "name": "Nephil Scout",
+    "base_hp": 10,
+    "hp_per_floor": 3,
+    "attack": 4,
+    "defense": 1,
+    "aggro_range": 6,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "melee_patrol"
+  },
+  "giant_warrior": {
+    "name": "Nephil Warrior",
+    "base_hp": 14,
+    "hp_per_floor": 4,
+    "attack": 5,
+    "defense": 2,
+    "aggro_range": 7,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "melee"
+  },
+  "giant_shaman": {
+    "name": "Nephil Shaman",
+    "base_hp": 12,
+    "hp_per_floor": 3,
+    "attack": 5,
+    "defense": 1,
+    "aggro_range": 8,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "ranged",
+    "ranged_range": 5
+  },
+  "giant_brute": {
+    "name": "Nephil Brute",
+    "base_hp": 18,
+    "hp_per_floor": 5,
+    "attack": 6,
+    "defense": 2,
+    "aggro_range": 6,
+    "move_interval": 3,
+    "attack_interval": 2,
+    "behavior": "melee"
+  },
+  "mummy_king": {
+    "name": "Mummified King",
+    "base_hp": 38,
+    "hp_per_floor": 6,
+    "attack": 8,
+    "defense": 3,
+    "aggro_range": 9,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "poison_melee",
+    "poison_turns": 4,
+    "poison_damage": 2
+  },
+  "cult_saboteur": {
+    "name": "Child Saboteur",
+    "base_hp": 9,
+    "hp_per_floor": 2,
+    "attack": 4,
+    "defense": 1,
+    "aggro_range": 7,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "melee"
+  },
+  "cult_initiate": {
+    "name": "Child Initiate",
+    "base_hp": 7,
+    "hp_per_floor": 2,
+    "attack": 3,
+    "defense": 0,
+    "aggro_range": 7,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "ranged",
+    "ranged_range": 4
+  },
+  "babel_sentinel": {
+    "name": "Babel Sentinel",
+    "base_hp": 16,
+    "hp_per_floor": 4,
+    "attack": 6,
+    "defense": 2,
+    "aggro_range": 7,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "melee_patrol"
+  },
+  "babel_scribe": {
+    "name": "Babel Scribe",
+    "base_hp": 11,
+    "hp_per_floor": 3,
+    "attack": 5,
+    "defense": 1,
+    "aggro_range": 8,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "ranged",
+    "ranged_range": 5
+  },
+  "children_enforcer": {
+    "name": "Child Enforcer",
+    "base_hp": 13,
+    "hp_per_floor": 3,
+    "attack": 6,
+    "defense": 2,
+    "aggro_range": 8,
+    "move_interval": 2,
+    "attack_interval": 2,
+    "behavior": "melee"
   }
 }
-

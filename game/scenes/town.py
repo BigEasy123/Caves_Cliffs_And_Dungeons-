@@ -97,6 +97,8 @@ class TownScene(Scene):
             Npc("professor", "Professor", x=9, y=4),
             Npc("guard", "Guard", x=3, y=GRID_HEIGHT // 2),
             Npc("scout", "Scout", x=GRID_WIDTH - 4, y=GRID_HEIGHT // 2),
+            Npc("ta_ren", "Ren (TA)", x=10, y=6),
+            Npc("ta_lena", "Lena (TA)", x=11, y=6),
         ]
         self.npc_sprites = {
             "mayor": _try_load_npc(PATHS.sprites / "npcs", "mayor", size=(TILE_SIZE, TILE_SIZE)),
@@ -104,6 +106,8 @@ class TownScene(Scene):
             "professor": _try_load_npc(PATHS.sprites / "npcs", "professor", size=(TILE_SIZE, TILE_SIZE)),
             "guard": _try_load_npc(PATHS.sprites / "npcs", "guard", size=(TILE_SIZE, TILE_SIZE)),
             "scout": _try_load_npc(PATHS.sprites / "npcs", "scout", size=(TILE_SIZE, TILE_SIZE)),
+            "ta_ren": _try_load_npc(PATHS.sprites / "npcs", "ta_ren", size=(TILE_SIZE, TILE_SIZE)),
+            "ta_lena": _try_load_npc(PATHS.sprites / "npcs", "ta_lena", size=(TILE_SIZE, TILE_SIZE)),
         }
         self.dialogue = DialogueBox()
         self.status_menu = StatusMenu()

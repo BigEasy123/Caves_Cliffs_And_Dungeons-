@@ -7,6 +7,15 @@ from game.state import STATE
 from game.story.missions import MISSIONS, apply_turn_in_rewards, is_turn_in_available
 from game.ui.dialogue_box import DialogueBox
 from game.ui.status_menu import StatusMenu
+from game.story.flags import (
+    FLAG_BOW_DESTROYED,
+    FLAG_BOW_STOLEN,
+    FLAG_CULT_STOLE_CREDIT,
+    FLAG_MET_RECRUIT,
+    FLAG_RIVAL_KIDNAPPED,
+    FLAG_RIVAL_RESCUED,
+)
+from game.story.factions import CHILDREN_OF_THE_NEPHIL
 
 
 class GuildScene(Scene):
@@ -79,6 +88,8 @@ class GuildScene(Scene):
                 STATE.active_mission = mission_id
                 # Baseline bounty counters so kill-based missions progress from acceptance.
                 STATE.mission_kill_baseline = dict(STATE.kill_log)
+                if mission_id == "rival_hostage":
+                    STATE.set(FLAG_RIVAL_KIDNAPPED)
                 self._start_dialogue(speaker="Guild Clerk", lines=MISSIONS[mission_id].accept_lines)
         return None
 
@@ -177,5 +188,61 @@ class GuildScene(Scene):
             from game.assets_manifest import PATHS
 
             self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
+            if mission_id == "cave_in_rescue":
+                self._start_dialogue(
+                    speaker="Guild Clerk",
+                    lines=[
+                        "We should be celebrating... but listen.",
+                        "Those 'rescuers' in red robes are already spinning the story.",
+                        "They'll take credit. They'll call you a helper.",
+                        "And if you protest... they'll make sure you can't.",
+                        "(Later, outside the hall...)",
+                        "A sharp pain catches you between the ribs. You hit the ground.",
+                        "Voices laugh: 'History belongs to the strong.'",
+                        f"When you wake, the town is cheering {CHILDREN_OF_THE_NEPHIL}'s 'heroic rescue'.",
+                    ],
+                    on_finish=self._after_cave_in_betrayal,
+                )
+            if mission_id == "rival_hostage":
+                STATE.set(FLAG_RIVAL_RESCUED)
+                STATE.unset(FLAG_RIVAL_KIDNAPPED)
+                self._start_dialogue(
+                    speaker="Guild Clerk",
+                    lines=[
+                        "You got them back. The medics are taking over.",
+                        "Whatever you two had going on... let it go.",
+                        f"{CHILDREN_OF_THE_NEPHIL} doesn't care about pride—only leverage.",
+                    ],
+                )
+            if mission_id == "nimrods_bow_find":
+                # Part I climax: bow stolen, recruit vanishes.
+                STATE.set(FLAG_BOW_STOLEN)
+                STATE.set(FLAG_MET_RECRUIT)
+                self._start_dialogue(
+                    speaker="Guild Clerk",
+                    lines=[
+                        "The bow... was on the table. Now it's gone.",
+                        "The new recruit is gone too.",
+                        f"A note is pinned to the door: '{CHILDREN_OF_THE_NEPHIL} claim what was always ours.'",
+                        "Part I ends here. The fallout starts now.",
+                    ],
+                )
+                return
+            if mission_id == "nimrods_bow_destroy":
+                STATE.set(FLAG_BOW_DESTROYED)
+                self._start_dialogue(
+                    speaker="Professor",
+                    lines=[
+                        "Good. It's over.",
+                        "No relic. No leverage. No fracture point.",
+                        f"But {CHILDREN_OF_THE_NEPHIL} will not forget what you did.",
+                    ],
+                )
+                return
         else:
             self.message = "You don't have the required items."
+
+    def _after_cave_in_betrayal(self) -> None:
+        STATE.set(FLAG_CULT_STOLE_CREDIT)
+        STATE.hp = max(1, min(STATE.hp, max(1, STATE.max_hp_total() // 2)))
+        self.message = f"{CHILDREN_OF_THE_NEPHIL} stole the credit. You were left bruised—and furious."

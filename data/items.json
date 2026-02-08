@@ -40,6 +40,55 @@
     "buy_price": 0,
     "sell_price": 0
   },
+  "nephil_relic_ankh": {
+    "name": "Nephil Relic: Sun Ankh",
+    "description": "A relic of the lost Nephil civilization.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
+  "nephil_relic_map": {
+    "name": "Nephil Relic: Star Map",
+    "description": "A relic etched with constellations older than the empire.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
+  "nephil_relic_crown": {
+    "name": "Nephil Relic: Crown of Dust",
+    "description": "The last king's crown. It hums with a wrong kind of memory.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
+  "head_miner_token": {
+    "name": "Head Miner's Tag",
+    "description": "Proof the head miner made it back. Return to the Guild.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
+  "rival_rescue_badge": {
+    "name": "Rival Rescue Badge",
+    "description": "Proof you brought your rival back alive.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
+  "nimrods_bow": {
+    "name": "Nimrod's Bow",
+    "description": "An artifact carved with layered scripts. It feels like language made solid.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
+  "babel_tablet": {
+    "name": "Babel Tablet",
+    "description": "A tablet covered in mixed languages. Bring it to the Archivist.",
+    "type": "quest",
+    "buy_price": 0,
+    "sell_price": 0
+  },
   "relic_shard": {
     "name": "Relic Shard",
     "description": "A fragment of an old carving. Valuable to the Guild/Archivist.",

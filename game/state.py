@@ -25,9 +25,22 @@ class GameState:
     active_mission: str | None = None
     kill_log: dict[str, int] = field(default_factory=dict)
     mission_kill_baseline: dict[str, int] = field(default_factory=dict)
+    rescued_miners_total: int = 0
+    missions_turned_in_total: int = 0
+    relics_turned_in_total: int = 0
+    rival_missions: int = 0
+    rival_relics: int = 0
+    rival_rescues: int = 0
     guard_turns: int = 0
     poison_turns: int = 0
     poison_damage: int = 0
+
+    def rivalry_player_score(self) -> int:
+        # Weight relics higher than routine missions.
+        return int(self.missions_turned_in_total) + int(self.rescued_miners_total) + int(self.relics_turned_in_total) * 3
+
+    def rivalry_rival_score(self) -> int:
+        return int(self.rival_missions) + int(self.rival_rescues) + int(self.rival_relics) * 3
 
     def has(self, flag: str) -> bool:
         return flag in self.flags

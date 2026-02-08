@@ -106,10 +106,16 @@ class DungeonScene(Scene):
         self.floor_grass = load_sprite_variants(PATHS.tiles, prefix="floor_grass", size=(TILE_SIZE, TILE_SIZE)) or self.floor_stone
         self.floor_gravel = load_sprite_variants(PATHS.tiles, prefix="floor_gravel", size=(TILE_SIZE, TILE_SIZE)) or self.floor_stone
         self.floor_mud = load_sprite_variants(PATHS.tiles, prefix="floor_mud", size=(TILE_SIZE, TILE_SIZE)) or self.floor_gravel
+        self.floor_sand = load_sprite_variants(PATHS.tiles, prefix="floor_sand", size=(TILE_SIZE, TILE_SIZE)) or self.floor_gravel
+        self.floor_mine = load_sprite_variants(PATHS.tiles, prefix="floor_mine", size=(TILE_SIZE, TILE_SIZE)) or self.floor_gravel
+        self.floor_babel = load_sprite_variants(PATHS.tiles, prefix="floor_babel", size=(TILE_SIZE, TILE_SIZE)) or self.floor_stone
         self.wall_rock = load_sprite_variants(PATHS.tiles, prefix="wall_rock", size=(TILE_SIZE, TILE_SIZE)) or load_sprite_variants(
             PATHS.tiles, prefix="wall", size=(TILE_SIZE, TILE_SIZE)
         )
         self.wall_stone = load_sprite_variants(PATHS.tiles, prefix="wall_stone", size=(TILE_SIZE, TILE_SIZE)) or self.wall_rock
+        self.wall_sandstone = load_sprite_variants(PATHS.tiles, prefix="wall_sandstone", size=(TILE_SIZE, TILE_SIZE)) or self.wall_stone
+        self.wall_mine = load_sprite_variants(PATHS.tiles, prefix="wall_mine", size=(TILE_SIZE, TILE_SIZE)) or self.wall_rock
+        self.wall_babel = load_sprite_variants(PATHS.tiles, prefix="wall_babel", size=(TILE_SIZE, TILE_SIZE)) or self.wall_stone
         self.special_tiles = {
             TILE_STAIRS_DOWN: try_load_sprite(PATHS.tiles / "stairs_down.png", size=(TILE_SIZE, TILE_SIZE)),
             TILE_STAIRS_UP: try_load_sprite(PATHS.tiles / "stairs_up.png", size=(TILE_SIZE, TILE_SIZE)),
@@ -128,6 +134,10 @@ class DungeonScene(Scene):
         self.items_gained: dict[str, int] = {}
         self.skills_open = False
         self.skill_index = 0
+        self.rescued_in_run = 0
+        self.rescued_head_miner = False
+        self.rescued_rival = False
+        self._rescues_committed = False
         self._reveal()
 
     def _generate_floor(self) -> list[list[int]]:
@@ -179,6 +189,17 @@ class DungeonScene(Scene):
             enemy_id = self.rng.choice(table)
             self.enemies.append(spawn_enemy(enemy_id, x=x, y=y, floor=self.run.floor, combat_level=STATE.combat_level, rng=self.rng))
 
+        # Boss: place the Mummified King on the final floor of the Nephil tomb.
+        if self.run.dungeon_id == "nephil_tomb" and self.run.floor >= self.run.max_floor:
+            boss_id = "mummy_king"
+            if not any(e.enemy_id == boss_id for e in self.enemies):
+                candidates = [c for c in floor_cells if abs(c[0] - self.player.x) + abs(c[1] - self.player.y) >= 8]
+                x, y = (candidates[0] if candidates else (floor_cells[0] if floor_cells else (self.player.x + 2, self.player.y)))
+                # Remove from available cells if present
+                if (x, y) in floor_cells:
+                    floor_cells.remove((x, y))
+                self.enemies.append(spawn_enemy(boss_id, x=x, y=y, floor=self.run.floor, combat_level=STATE.combat_level, rng=self.rng))
+
         # A couple simple pickups
         for _ in range(2):
             if not floor_cells:
@@ -192,6 +213,23 @@ class DungeonScene(Scene):
         if self.rng.random() < 0.35 and floor_cells:
             x, y = floor_cells.pop()
             self.pickups.append(Pickup(item_id="relic_shard", x=x, y=y))
+
+        # Chapter 3: miners trapped in collapsed mines / deep shaft.
+        if self.run.dungeon_id in ("collapsed_mines", "deep_shaft") and floor_cells:
+            miner_count = 2 + (self.run.floor // 2)
+            for _ in range(miner_count):
+                if not floor_cells:
+                    break
+                x, y = floor_cells.pop()
+                self.pickups.append(Pickup(item_id="trapped_miner", x=x, y=y))
+            if self.run.dungeon_id == "deep_shaft" and self.run.floor >= self.run.max_floor and floor_cells:
+                x, y = floor_cells.pop()
+                self.pickups.append(Pickup(item_id="head_miner", x=x, y=y))
+
+        # Chapter 4: hostage rescue (rival held by the Children).
+        if self.run.dungeon_id == "children_hideout" and self.run.floor >= self.run.max_floor and floor_cells:
+            x, y = floor_cells.pop()
+            self.pickups.append(Pickup(item_id="rival_hostage", x=x, y=y))
 
         # Mission items (rescue/collect style): ensure at least a chance to find them during a run.
         mission_id = STATE.active_mission
@@ -207,7 +245,15 @@ class DungeonScene(Scene):
                     continue
                 if not floor_cells:
                     break
-                if self.rng.random() < 0.60:
+                # For the Nephil crown, prefer placing it on the final floor.
+                if item_id == "nephil_relic_crown" and (self.run.dungeon_id != "nephil_tomb" or self.run.floor < self.run.max_floor):
+                    continue
+                # For Nimrod's Bow, place only at the bottom of the Tower/Vault.
+                if item_id == "nimrods_bow" and (
+                    (self.run.dungeon_id not in ("babel_tower", "children_vault")) or self.run.floor < self.run.max_floor
+                ):
+                    continue
+                if self.rng.random() < 0.75:
                     x, y = floor_cells.pop()
                     self.pickups.append(Pickup(item_id=item_id, x=x, y=y))
 
@@ -309,7 +355,13 @@ class DungeonScene(Scene):
                     )
                     continue
                 if cell == TILE_FLOOR:
-                    if self.run.dungeon_id == "jungle_cavern":
+                    if self.run.dungeon_id.startswith("nephil_"):
+                        variants = self.floor_sand if (x + y + self.visual_seed) % 6 else self.floor_gravel
+                    elif self.run.dungeon_id in ("collapsed_mines", "deep_shaft"):
+                        variants = self.floor_mine if (x + y + self.visual_seed) % 6 else self.floor_gravel
+                    elif self.run.dungeon_id == "babel_tower":
+                        variants = self.floor_babel if (x + y + self.visual_seed) % 6 else self.floor_stone
+                    elif self.run.dungeon_id == "jungle_cavern":
                         variants = self.floor_grass if (x + y + self.visual_seed) % 5 else self.floor_mud
                     else:
                         variants = self.floor_stone if (x + y + self.visual_seed) % 7 else self.floor_gravel
@@ -318,7 +370,14 @@ class DungeonScene(Scene):
                         surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
                         continue
                 if cell == TILE_WALL:
-                    wall_variants = self.wall_rock if self.run.dungeon_id == "jungle_cavern" else self.wall_stone
+                    if self.run.dungeon_id.startswith("nephil_"):
+                        wall_variants = self.wall_sandstone
+                    elif self.run.dungeon_id in ("collapsed_mines", "deep_shaft"):
+                        wall_variants = self.wall_mine
+                    elif self.run.dungeon_id == "babel_tower":
+                        wall_variants = self.wall_babel
+                    else:
+                        wall_variants = self.wall_rock if self.run.dungeon_id == "jungle_cavern" else self.wall_stone
                     sprite = pick_variant(wall_variants, x=x, y=y, seed=self.visual_seed)
                     if sprite is not None:
                         surface.blit(sprite, (x * TILE_SIZE, y * TILE_SIZE))
@@ -411,6 +470,13 @@ class DungeonScene(Scene):
         tile = self.grid[self.player.y][self.player.x]
 
         if tile == TILE_DUNGEON_EXIT:
+            if self.run.dungeon_id == "nephil_tomb" and any(e.is_alive() and e.enemy_id == "mummy_king" for e in self.enemies):
+                self.message = "A cursed weight seals the exit. Defeat the Mummified King."
+                self.app.audio.play_sfx(PATHS.sfx / "error.wav", volume=0.40)
+                return None
+            self._commit_rescues()
+            if self._check_missions_progress():
+                return self.pending_scene
             self.message = "You escape the dungeon!"
             save_slot(1)
             self.app.toast("Autosaved (slot 1)")
@@ -578,6 +644,8 @@ class DungeonScene(Scene):
         enemy.hp = max(0, enemy.hp - damage)
         if enemy.hp <= 0:
             STATE.record_kill(enemy.enemy_id)
+            if enemy.enemy_id == "mummy_king":
+                self._grant_boss_relic_if_needed()
             levels = STATE.add_combat_xp(6 + self.run.floor)
             if levels:
                 self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
@@ -600,6 +668,24 @@ class DungeonScene(Scene):
     def _pickup_if_present(self) -> None:
         for idx, pickup in enumerate(list(self.pickups)):
             if pickup.x == self.player.x and pickup.y == self.player.y:
+                if pickup.item_id == "trapped_miner":
+                    self.rescued_in_run += 1
+                    self.message = "You rescued a miner! Escort them out to safety."
+                    self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
+                    self.pickups.pop(idx)
+                    return
+                if pickup.item_id == "head_miner":
+                    self.rescued_head_miner = True
+                    self.message = "You found the head miner! Get them out—now."
+                    self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
+                    self.pickups.pop(idx)
+                    return
+                if pickup.item_id == "rival_hostage":
+                    self.rescued_rival = True
+                    self.message = "You found your rival—hurt, but alive. Get them out."
+                    self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
+                    self.pickups.pop(idx)
+                    return
                 STATE.add_item(pickup.item_id, pickup.amount)
                 self.items_gained[pickup.item_id] = self.items_gained.get(pickup.item_id, 0) + pickup.amount
                 item = get_item(pickup.item_id)
@@ -609,6 +695,32 @@ class DungeonScene(Scene):
                 if pickup.item_id == "relic_shard":
                     self._check_missions_progress()
                 break
+
+    def _commit_rescues(self) -> None:
+        if self._rescues_committed:
+            return
+        self._rescues_committed = True
+        if self.rescued_in_run > 0:
+            STATE.rescued_miners_total = int(getattr(STATE, "rescued_miners_total", 0)) + int(self.rescued_in_run)
+            # Rivalry: rival also racks up rescues sometimes.
+            if int(getattr(STATE, "chapter", 1)) >= 4:
+                try:
+                    import zlib
+
+                    h = zlib.crc32(f"{self.run.dungeon_id}:{self.run.floor}:{self.run.seed_base}".encode("utf-8"))
+                    if h % 2 == 0:
+                        STATE.rival_rescues = int(getattr(STATE, "rival_rescues", 0)) + max(1, self.rescued_in_run // 2)
+                except Exception:
+                    pass
+            self.app.toast(f"Escorted {self.rescued_in_run} miner(s) to safety.")
+        if self.rescued_head_miner and STATE.item_count("head_miner_token") <= 0:
+            STATE.add_item("head_miner_token", 1)
+            self.items_gained["head_miner_token"] = self.items_gained.get("head_miner_token", 0) + 1
+            self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
+        if self.rescued_rival and STATE.item_count("rival_rescue_badge") <= 0:
+            STATE.add_item("rival_rescue_badge", 1)
+            self.items_gained["rival_rescue_badge"] = self.items_gained.get("rival_rescue_badge", 0) + 1
+            self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
 
     def _enemy_at(self, x: int, y: int) -> Enemy | None:
         for enemy in self.enemies:
@@ -684,6 +796,8 @@ class DungeonScene(Scene):
             self.app.audio.play_sfx(PATHS.sfx / "shoot.wav", volume=0.4)
             if target.hp <= 0:
                 STATE.record_kill(target.enemy_id)
+                if target.enemy_id == "mummy_king":
+                    self._grant_boss_relic_if_needed()
                 levels = STATE.add_combat_xp(5 + self.run.floor)
                 if levels:
                     self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
@@ -708,6 +822,8 @@ class DungeonScene(Scene):
             self.app.audio.play_sfx(PATHS.sfx / "hit.wav", volume=0.55)
             if target.hp <= 0:
                 STATE.record_kill(target.enemy_id)
+                if target.enemy_id == "mummy_king":
+                    self._grant_boss_relic_if_needed()
                 levels = STATE.add_combat_xp(6 + self.run.floor)
                 if levels:
                     self.app.toast(f"Combat level up! Lv {STATE.combat_level}")
@@ -719,6 +835,22 @@ class DungeonScene(Scene):
                 self.message += " Defeated!"
                 self._check_missions_progress()
             return
+
+    def _grant_boss_relic_if_needed(self) -> None:
+        mission_id = STATE.active_mission
+        mission = MISSIONS.get(mission_id) if mission_id else None
+        if mission is None:
+            return
+        needs_crown = any(
+            str(obj.get("type", "")) == "collect_item" and str(obj.get("item_id", "")) == "nephil_relic_crown"
+            for obj in mission.objectives
+        )
+        if not needs_crown or STATE.item_count("nephil_relic_crown") > 0:
+            return
+        STATE.add_item("nephil_relic_crown", 1)
+        self.items_gained["nephil_relic_crown"] = self.items_gained.get("nephil_relic_crown", 0) + 1
+        self.app.audio.play_sfx(PATHS.sfx / "pickup.wav", volume=0.45)
+        self.message += " You claim the Crown of Dust."
 
     def _enemy_at_adjacent(self) -> Enemy | None:
         for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
@@ -871,6 +1003,7 @@ class DungeonScene(Scene):
     def _summary_scene(self, *, reason: str) -> Scene:
         from game.scenes.run_summary import RunSummaryScene
 
+        self._commit_rescues()
         next_scene = self._return_scene()
         lines = [
             f"Reason: {reason}",
@@ -878,6 +1011,8 @@ class DungeonScene(Scene):
             f"Enemies defeated: {self.kills}",
             f"Gold gained: {self.gold_gained}",
         ]
+        if self.rescued_in_run:
+            lines.append(f"Miners escorted out: {self.rescued_in_run}")
         if self.items_gained:
             lines.append("Items gained:")
             for item_id, count in sorted(self.items_gained.items()):

@@ -151,6 +151,54 @@ def spawn_enemy(enemy_id: str, *, x: int, y: int, floor: int, combat_level: int 
 
 
 def enemy_table_for_dungeon(dungeon_id: str, floor: int) -> list[str]:
+    if dungeon_id == "nephil_dunes":
+        if floor <= 2:
+            return ["giant_scout", "giant_warrior"]
+        if floor <= 4:
+            return ["giant_scout", "giant_warrior", "giant_shaman"]
+        return ["giant_warrior", "giant_shaman", "giant_brute"]
+    if dungeon_id == "nephil_oasis":
+        if floor <= 2:
+            return ["giant_scout", "giant_shaman"]
+        if floor <= 4:
+            return ["giant_warrior", "giant_shaman", "giant_brute"]
+        return ["giant_warrior", "giant_shaman", "giant_brute"]
+    if dungeon_id == "nephil_tomb":
+        if floor <= 2:
+            return ["giant_warrior", "giant_shaman"]
+        if floor <= 4:
+            return ["giant_warrior", "giant_shaman", "giant_brute"]
+        return ["giant_warrior", "giant_shaman", "giant_brute"]
+    if dungeon_id == "collapsed_mines":
+        if floor <= 2:
+            return ["bat", "cult_saboteur"]
+        if floor <= 4:
+            return ["cult_saboteur", "cult_initiate", "raider"]
+        return ["cult_saboteur", "cult_initiate", "guardian"]
+    if dungeon_id == "deep_shaft":
+        if floor <= 2:
+            return ["cult_saboteur", "cult_initiate"]
+        if floor <= 4:
+            return ["cult_saboteur", "cult_initiate", "guardian"]
+        return ["cult_saboteur", "cult_initiate", "giant_scout"]
+    if dungeon_id == "children_hideout":
+        if floor <= 2:
+            return ["cult_saboteur", "cult_initiate"]
+        if floor <= 4:
+            return ["cult_saboteur", "cult_initiate", "raider"]
+        return ["cult_saboteur", "cult_initiate", "giant_scout"]
+    if dungeon_id == "babel_tower":
+        if floor <= 2:
+            return ["raider", "babel_scribe"]
+        if floor <= 4:
+            return ["babel_scribe", "babel_sentinel", "archer"]
+        return ["babel_scribe", "babel_sentinel", "guardian"]
+    if dungeon_id == "children_vault":
+        if floor <= 2:
+            return ["cult_saboteur", "cult_initiate"]
+        if floor <= 4:
+            return ["cult_saboteur", "cult_initiate", "children_enforcer"]
+        return ["cult_initiate", "children_enforcer", "giant_scout"]
     if dungeon_id == "jungle_cavern":
         if floor <= 2:
             return ["snake", "bat"]

@@ -63,6 +63,131 @@ _DEFAULT_MISSIONS: dict[str, MissionDef] = {
         reward_items={"torch": 1},
         objectives=[{"type": "reach_floor", "dungeon_id": "temple_ruins", "floor": 3}],
     ),
+    "cave_in_rescue": MissionDef(
+        mission_id="cave_in_rescue",
+        name="Cave-in: Rescue Operation",
+        description="A remote mine has collapsed. Rescue trapped miners and escort them home.",
+        mission_type="rescue",
+        min_chapter=3,
+        accept_lines=[
+            "We got a distress call from miners in a remote shaft.",
+            "The Children of the Nephil are there too—playing hero. Don't trust them.",
+            "Rescue 26 miners and escort them out. Then find the head miner in the deepest shaft.",
+        ],
+        turn_in_lines=[
+            "They're alive... you actually pulled it off.",
+            "The public loves a good rescue story. Be careful who gets to tell it.",
+        ],
+        reward_gold=160,
+        reward_guild_xp=170,
+        reward_items={"potion_medium": 1},
+        consume_items={"head_miner_token": 1},
+        objectives=[{"type": "rescue_miners", "count": 26}, {"type": "collect_item", "item_id": "head_miner_token", "count": 1}],
+    ),
+    "rival_hostage": MissionDef(
+        mission_id="rival_hostage",
+        name="Rivalry: Hostage Rescue",
+        description="Your rival went missing on a bragging spree. Rescue them from the Children of the Nephil.",
+        mission_type="rescue",
+        min_chapter=4,
+        accept_lines=[
+            "Your rival hasn't checked in. Not like them.",
+            "A rumor says the Children of the Nephil took someone into a hideout.",
+            "Bring them back. Alive.",
+        ],
+        turn_in_lines=[
+            "They're alive... barely.",
+            "The rivalry can wait. This was a warning.",
+        ],
+        reward_gold=140,
+        reward_guild_xp=150,
+        reward_items={"potion_medium": 1},
+        consume_items={"rival_rescue_badge": 1},
+        objectives=[{"type": "collect_item", "item_id": "rival_rescue_badge", "count": 1}],
+    ),
+    "babel_tablet": MissionDef(
+        mission_id="babel_tablet",
+        name="Not What They Seem (I): Babel Tablet",
+        description="Investigate the strange tower and recover evidence of mixed languages.",
+        mission_type="rescue",
+        min_chapter=5,
+        accept_lines=[
+            "A new civilization has appeared around a giant tower.",
+            "The writings are an impossible mix of languages—like they were fused together.",
+            "Bring back a Babel Tablet so the Archivist can study it.",
+        ],
+        turn_in_lines=[
+            "These scripts... they're stacked like layers in time.",
+            "This tower isn't just old. It's wrong. Keep going.",
+        ],
+        reward_gold=120,
+        reward_guild_xp=130,
+        reward_items={"torch": 1},
+        consume_items={"babel_tablet": 1},
+        objectives=[{"type": "collect_item", "item_id": "babel_tablet", "count": 1}],
+    ),
+    "nimrods_bow_find": MissionDef(
+        mission_id="nimrods_bow_find",
+        name="Not What They Seem (I): Nimrod's Bow",
+        description="Reach the bottom of the tower and recover Nimrod's Bow.",
+        mission_type="escort",
+        min_chapter=5,
+        accept_lines=[
+            "Reports say the tower has a deep foundation—stairs that shouldn't exist.",
+            "At the bottom is an artifact: Nimrod's Bow.",
+            "Bring it back. Keep it close. Don't trust the new recruit.",
+        ],
+        turn_in_lines=[
+            "You actually found it...",
+            "Hold on—someone's missing. Where is the recruit?",
+        ],
+        reward_gold=180,
+        reward_guild_xp=190,
+        reward_items={"potion_medium": 1},
+        consume_items={"nimrods_bow": 1},
+        objectives=[{"type": "collect_item", "item_id": "nimrods_bow", "count": 1}],
+    ),
+    "nimrods_bow_retrieve": MissionDef(
+        mission_id="nimrods_bow_retrieve",
+        name="Not What They Seem (II): Steal It Back",
+        description="The Children stole the bow. Infiltrate their vault and retrieve it.",
+        mission_type="rescue",
+        min_chapter=6,
+        accept_lines=[
+            "The recruit was an imposter.",
+            "The bow is in a Children vault. If they use it, the timeline fractures.",
+            "Go. Retrieve Nimrod's Bow.",
+        ],
+        turn_in_lines=[
+            "You got it back.",
+            "Now we do the hard part: we destroy it.",
+        ],
+        reward_gold=160,
+        reward_guild_xp=170,
+        reward_items={"antidote": 1},
+        consume_items={"nimrods_bow": 1},
+        objectives=[{"type": "collect_item", "item_id": "nimrods_bow", "count": 1}],
+    ),
+    "nimrods_bow_destroy": MissionDef(
+        mission_id="nimrods_bow_destroy",
+        name="Not What They Seem (II): Destroy the Bow",
+        description="Hand over Nimrod's Bow so the Guild can destroy it safely.",
+        mission_type="escort",
+        min_chapter=6,
+        accept_lines=[
+            "We can't keep it. Not even locked away.",
+            "Bring the bow to the Professor. We'll destroy it before the Children can trace it.",
+        ],
+        turn_in_lines=[
+            "It's done. The bow is gone.",
+            "But the Children now know exactly who you are.",
+        ],
+        reward_gold=220,
+        reward_guild_xp=230,
+        reward_items={"iron_ring": 1},
+        consume_items={"nimrods_bow": 1},
+        objectives=[{"type": "collect_item", "item_id": "nimrods_bow", "count": 1}],
+    ),
 }
 
 
@@ -109,7 +234,26 @@ def apply_turn_in_rewards(state: GameState, mission_id: str) -> bool:
         state.remove_item(item_id, count)
     state.gold += mission.reward_gold
     state.add_guild_xp(mission.reward_guild_xp)
+    state.missions_turned_in_total = int(getattr(state, "missions_turned_in_total", 0)) + 1
+    # Track relic turn-ins for rivalry (covers Nephil relics + any future relics).
+    for item_id, count in mission.consume_items.items():
+        if "relic" in str(item_id):
+            state.relics_turned_in_total = int(getattr(state, "relics_turned_in_total", 0)) + int(count)
     for item_id, count in mission.reward_items.items():
         state.add_item(item_id, count)
     state.claimed_missions.add(mission_id)
+
+    # Rival progression (simple deterministic "they also did stuff" model).
+    try:
+        import zlib
+
+        h = zlib.crc32(mission_id.encode("utf-8"))
+        if h % 3 != 0:
+            state.rival_missions = int(getattr(state, "rival_missions", 0)) + 1
+        if h % 5 == 0 and any("relic" in str(i) for i in mission.consume_items.keys()):
+            state.rival_relics = int(getattr(state, "rival_relics", 0)) + 1
+        if h % 7 == 0:
+            state.rival_rescues = int(getattr(state, "rival_rescues", 0)) + 1
+    except Exception:
+        pass
     return True

@@ -37,6 +37,11 @@ class StatusMenu:
             f"Combat Lv: {state.combat_level}  XP: {state.combat_xp}/{state.combat_xp_to_next(state.combat_level)}",
             f"Guild Rank: {state.guild_rank}  XP: {state.guild_xp}/{state.guild_xp_to_next(state.guild_rank)}",
             f"Story: Chapter {state.chapter} — {chapter_title(state.chapter)}",
+            (
+                f"Rivalry: You {state.rivalry_player_score()} vs Rival {state.rivalry_rival_score()}"
+                if int(getattr(state, 'chapter', 1)) >= 4
+                else "Rivalry: -"
+            ),
             f"Active mission: {state.active_mission or 'None'}",
             (f"Objective: {mission_objective_text(state.active_mission)}" if state.active_mission else "Objective: -"),
             f"Completed missions: {len(state.completed_missions)}",

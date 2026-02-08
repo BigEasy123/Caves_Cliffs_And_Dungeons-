@@ -23,6 +23,8 @@ from game.constants import (
 from game.scenes.base import Scene
 from game.state import STATE
 from game.story.flags import FLAG_GOT_TEMPLE_PASS
+from game.story.flags import FLAG_RIVAL_KIDNAPPED
+from game.story.flags import FLAG_BOW_STOLEN
 from game.ui.status_menu import StatusMenu
 from game.world.dungeon_run import DungeonRun
 from game.save import save_slot
@@ -221,6 +223,62 @@ class OutskirtsScene(Scene):
                 "max_floor": 7,
                 "locked": ("relic_shard" not in STATE.completed_missions),
                 "lock_reason": "Complete a guild mission to unlock.",
+            },
+            {
+                "name": "Nephil Dunes",
+                "dungeon_id": "nephil_dunes",
+                "max_floor": 4,
+                "locked": (STATE.chapter < 2),
+                "lock_reason": "Reach Chapter 2 (Guild Rank 2) to unlock.",
+            },
+            {
+                "name": "Nephil Oasis Ruins",
+                "dungeon_id": "nephil_oasis",
+                "max_floor": 5,
+                "locked": (STATE.chapter < 2),
+                "lock_reason": "Reach Chapter 2 (Guild Rank 2) to unlock.",
+            },
+            {
+                "name": "Nephil Sunken Tomb",
+                "dungeon_id": "nephil_tomb",
+                "max_floor": 6,
+                "locked": (STATE.chapter < 2 or "nephil_relic_ankh" not in STATE.completed_missions or "nephil_relic_map" not in STATE.completed_missions),
+                "lock_reason": "Complete the first two Nephil relic missions to unlock.",
+            },
+            {
+                "name": "Collapsed Mines",
+                "dungeon_id": "collapsed_mines",
+                "max_floor": 6,
+                "locked": (STATE.chapter < 3),
+                "lock_reason": "Reach Chapter 3 (Guild Rank 3) to unlock.",
+            },
+            {
+                "name": "Deepest Shaft",
+                "dungeon_id": "deep_shaft",
+                "max_floor": 8,
+                "locked": (STATE.chapter < 3 or STATE.rescued_miners_total < 10),
+                "lock_reason": "Rescue more miners from the Collapsed Mines to unlock.",
+            },
+            {
+                "name": "Children Hideout",
+                "dungeon_id": "children_hideout",
+                "max_floor": 5,
+                "locked": (STATE.chapter < 4 or not STATE.has(FLAG_RIVAL_KIDNAPPED)),
+                "lock_reason": "Accept the Rivalry mission to reveal the hideout.",
+            },
+            {
+                "name": "Tower of Babel",
+                "dungeon_id": "babel_tower",
+                "max_floor": 9,
+                "locked": (STATE.chapter < 5),
+                "lock_reason": "Reach Chapter 5 (Guild Rank 5) to unlock.",
+            },
+            {
+                "name": "Children Vault",
+                "dungeon_id": "children_vault",
+                "max_floor": 6,
+                "locked": (STATE.chapter < 6 or not STATE.has(FLAG_BOW_STOLEN)),
+                "lock_reason": "After the bow is stolen (Chapter 6), the vault becomes accessible.",
             },
         ]
 

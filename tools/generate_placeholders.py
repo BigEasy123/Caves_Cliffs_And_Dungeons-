@@ -100,6 +100,12 @@ def _generate_pngs(*, tile_size: int, tiles_dir: Path, sprites_dir: Path, overwr
         tile(tiles_dir / f"floor_grass{i}.png", f"GRASS{i}", Colors((34, 62, 38), (60, 120, 70)), texture="leaf", icon=None, variant=40 + i)
         tile(tiles_dir / f"floor_gravel{i}.png", f"GRAVEL{i}", Colors((60, 56, 48), (110, 105, 95)), texture="dots", icon=None, variant=50 + i)
         tile(tiles_dir / f"floor_mud{i}.png", f"MUD{i}", Colors((78, 58, 38), (130, 95, 60)), texture="dots", icon=None, variant=70 + i)
+        tile(tiles_dir / f"floor_sand{i}.png", f"SAND{i}", Colors((120, 106, 66), (210, 190, 120)), texture="sand", icon=None, variant=80 + i)
+        tile(tiles_dir / f"wall_sandstone{i}.png", f"SANDSTONE{i}", Colors((140, 124, 78), (230, 210, 140)), texture="sandstone", icon=None, variant=90 + i)
+        tile(tiles_dir / f"floor_mine{i}.png", f"MINE{i}", Colors((52, 46, 38), (120, 105, 90)), texture="mine_floor", icon=None, variant=100 + i)
+        tile(tiles_dir / f"wall_mine{i}.png", f"MWALL{i}", Colors((68, 60, 50), (145, 125, 100)), texture="mine_wall", icon=None, variant=110 + i)
+        tile(tiles_dir / f"floor_babel{i}.png", f"BABEL{i}", Colors((46, 44, 58), (170, 160, 210)), texture="babel_floor", icon=None, variant=120 + i)
+        tile(tiles_dir / f"wall_babel{i}.png", f"BWALL{i}", Colors((72, 68, 92), (210, 200, 240)), texture="babel_wall", icon=None, variant=130 + i)
 
     sprite(sprites_dir / "player.png", "YOU", Colors((240, 210, 80), (110, 80, 20)), icon="person")
     sprite(sprites_dir / "enemy.png", "FOE", Colors((220, 90, 90), (110, 30, 30)), icon="skull")
@@ -254,6 +260,19 @@ def _draw_texture(surf, icon: str, colors: Colors, *, variant: int) -> None:
                     surf.set_at((x, y), shade(colors.bg, -14))
         return
 
+    if icon == "sandstone":
+        # Similar to bricks but warmer + more grain.
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 10:
+                    surf.set_at((x, y), shade(colors.bg, 16))
+                elif n > 246:
+                    surf.set_at((x, y), shade(colors.bg, -12))
+                if (x + variant) % 7 == 0 and (y + variant) % 9 == 0 and n < 210:
+                    surf.set_at((x, y), shade(colors.bg, 10))
+        return
+
     # Jungle/grass: wispy blades
     if icon == "leaf":
         rng = random.Random((variant * 1000003 + w * 31 + h * 17) & 0xFFFFFFFF)
@@ -282,6 +301,80 @@ def _draw_texture(surf, icon: str, colors: Colors, *, variant: int) -> None:
             if rng.random() < 0.45:
                 hi = shade(colors.bg, 30)
                 pygame.draw.aaline(surf, hi, (x0 + 1, y0), (min(w - 3, x1 + 1), y1))
+        return
+
+    # Desert sand: speckle + subtle ripples
+    if icon == "sand":
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 22:
+                    surf.set_at((x, y), shade(colors.bg, 18))
+                elif n > 245:
+                    surf.set_at((x, y), shade(colors.bg, -10))
+                # Ripples (thin horizontal waves)
+                if (y * 3 + variant) % 17 == 0 and (x + (variant % 5)) % 4 != 0:
+                    if n < 200:
+                        surf.set_at((x, y), shade(colors.bg, 10))
+        return
+
+    if icon == "mine_floor":
+        # Dark gritty dirt/stone mix.
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 18:
+                    surf.set_at((x, y), shade(colors.bg, 14))
+                elif n > 244:
+                    surf.set_at((x, y), shade(colors.bg, -10))
+                if (x * 7 + y * 3 + variant) % 29 == 0 and n < 200:
+                    surf.set_at((x, y), shade(colors.bg, 18))
+        return
+
+    if icon == "mine_wall":
+        # Rock with occasional "timber" struts.
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 10:
+                    surf.set_at((x, y), shade(colors.bg, 16))
+                elif n > 248:
+                    surf.set_at((x, y), shade(colors.bg, -12))
+        # Timber lines
+        for y in range(6, h - 6, 9):
+            if (y + variant) % 18 == 0:
+                for x in range(2, w - 2):
+                    if (x + variant) % 5 != 0:
+                        surf.set_at((x, y), shade(colors.bg, 22))
+        return
+
+    if icon == "babel_floor":
+        # Smooth stone with faint glyph-like specks.
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 10:
+                    surf.set_at((x, y), shade(colors.bg, 16))
+                elif n > 248:
+                    surf.set_at((x, y), shade(colors.bg, -12))
+                if (x * 11 + y * 7 + variant) % 37 == 0 and n < 220:
+                    surf.set_at((x, y), shade(colors.bg, 26))
+        return
+
+    if icon == "babel_wall":
+        # Tall blockwork + occasional vertical "inscription" streaks.
+        for y in range(2, h - 2):
+            for x in range(2, w - 2):
+                n = jitter(x, y)
+                if n < 8:
+                    surf.set_at((x, y), shade(colors.bg, 18))
+                elif n > 250:
+                    surf.set_at((x, y), shade(colors.bg, -14))
+        for x in range(6, w - 6, 7):
+            if (x + variant) % 14 == 0:
+                for y in range(2, h - 2):
+                    if jitter(x, y) < 210:
+                        surf.set_at((x, y), shade(colors.bg, 22))
         return
 
     # Doors / special: subtle diagonal
