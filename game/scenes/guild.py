@@ -7,6 +7,7 @@ from game.state import STATE
 from game.story.missions import MISSIONS, apply_turn_in_rewards, is_turn_in_available
 from game.ui.dialogue_box import DialogueBox
 from game.ui.status_menu import StatusMenu
+from game.items import ITEMS, get_item
 from game.story.flags import (
     FLAG_ARROW_TIP_LOST,
     FLAG_CHILDREN_EXPERIMENT_SUCCEEDED,
@@ -37,6 +38,50 @@ class GuildScene(Scene):
         self.dialogue_speaker = "Guild"
         self.dialogue_on_finish = None
         self.dialogue_index = 0
+
+    def _play_cutscene(self, event_id: str) -> bool:
+        from game.scenes.cutscene import CutsceneScene
+        from game.story.cutscenes import cutscene_for_event
+
+        cs = cutscene_for_event(event_id)
+        if cs is None or STATE.has(cs.flag):
+            return False
+        STATE.set(cs.flag)
+        self.app.set_scene(CutsceneScene(self.app, pages=cs.pages, next_scene=GuildScene(self.app)))
+        return True
+
+    def _reward_lines(self, mission_id: str, *, before_rank: int, before_chapter: int) -> list[str]:
+        mission = MISSIONS[mission_id]
+        xp = int(getattr(mission, "reward_guild_xp", 0))
+        mission_type = str(getattr(mission, "mission_type", "misc"))
+
+        opener_by_type = {
+            "bounty": "Bounty confirmed. The board's getting quieter.",
+            "rescue": "They're safe. That's what matters.",
+            "escort": "Report received. Notes filed. Trails mapped.",
+            "misc": "Work logged.",
+        }
+        lines: list[str] = [opener_by_type.get(mission_type, "Work logged.")]
+
+        parts: list[str] = [f"+{int(getattr(mission, 'reward_gold', 0))}g"]
+        if xp:
+            parts.append(f"+{xp} guild XP")
+
+        rewards_items = dict(getattr(mission, "reward_items", {}) or {})
+        if rewards_items:
+            for item_id, count in sorted(rewards_items.items()):
+                name = get_item(item_id).name if item_id in ITEMS else str(item_id)
+                parts.append(f"{name} x{int(count)}")
+
+        after_rank = int(getattr(STATE, "guild_rank", 1))
+        after_chapter = int(getattr(STATE, "chapter", 1))
+        if after_rank > int(before_rank):
+            parts.append(f"Rank up! {after_rank}")
+        if after_chapter > int(before_chapter):
+            parts.append(f"Chapter {after_chapter} unlocked")
+
+        lines.append("Rewards: " + ", ".join(parts))
+        return lines
 
     def handle_event(self, event: pygame.event.Event) -> Scene | None:
         if event.type != pygame.KEYDOWN:
@@ -198,6 +243,60 @@ class GuildScene(Scene):
         before_chapter = STATE.chapter
         ok = apply_turn_in_rewards(STATE, mission_id)
         if ok:
+            # New flow: always show a reward dialogue, then (optionally) a story cutscene.
+            before_rank_i = int(before_rank)
+            before_chapter_i = int(before_chapter)
+
+            mission = MISSIONS[mission_id]
+            self.message = f"Turned in: {mission.name}"
+            self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
+
+            post_event: str | None = None
+
+            if mission_id == "cave_in_rescue":
+                STATE.set(FLAG_CULT_STOLE_CREDIT)
+                STATE.hp = max(1, min(STATE.hp, max(1, STATE.max_hp_total() // 2)))
+                post_event = "ch3_betrayal"
+            elif mission_id == "rival_hostage":
+                STATE.set(FLAG_RIVAL_RESCUED)
+                STATE.unset(FLAG_RIVAL_KIDNAPPED)
+                post_event = "ch4_rescue"
+            elif mission_id == "nimrods_bow_find":
+                STATE.set(FLAG_BOW_STOLEN)
+                STATE.set(FLAG_MET_RECRUIT)
+                post_event = "ch5_theft"
+            elif mission_id == "nimrods_bow_destroy":
+                STATE.set(FLAG_BOW_DESTROYED)
+                STATE.set(FLAG_ARROW_TIP_LOST)
+                STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 7)
+                post_event = "chapter_7"
+            elif mission_id == "ice_arrowhead_map":
+                STATE.set(FLAG_FOUND_ARROWHEAD_MAP)
+                STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 8)
+                STATE.mission_board = "guild"
+                post_event = "chapter_8"
+            elif mission_id == "tropic_arrowhead":
+                STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 9)
+                post_event = "chapter_9"
+            elif mission_id == "core_finale":
+                STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 10)
+                STATE.set(FLAG_POSTGAME_UNLOCKED)
+                STATE.set(FLAG_CHILDREN_EXPERIMENT_SUCCEEDED)
+                post_event = "chapter_10"
+
+            after_chapter_i = int(getattr(STATE, "chapter", 1))
+            if post_event is None and after_chapter_i > before_chapter_i:
+                post_event = f"chapter_{after_chapter_i}"
+
+            reward_lines = self._reward_lines(mission_id, before_rank=before_rank_i, before_chapter=before_chapter_i)
+
+            def after_rewards() -> None:
+                if post_event is not None:
+                    self._play_cutscene(post_event)
+
+            self._start_dialogue(speaker="Guild Clerk", lines=reward_lines, on_finish=after_rewards)
+            return
+
             mission = MISSIONS[mission_id]
             xp = int(getattr(mission, "reward_guild_xp", 0))
             parts = [f"Rewards: +{mission.reward_gold}g"]
@@ -211,50 +310,42 @@ class GuildScene(Scene):
             from game.assets_manifest import PATHS
 
             self.app.audio.play_sfx(PATHS.sfx / "confirm.wav", volume=0.35)
+
+            major_beats = {
+                "cave_in_rescue",
+                "rival_hostage",
+                "nimrods_bow_find",
+                "nimrods_bow_destroy",
+                "ice_arrowhead_map",
+                "tropic_arrowhead",
+                "core_finale",
+            }
+            if mission_id not in major_beats and int(getattr(STATE, "chapter", 1)) > int(before_chapter):
+                self._play_cutscene(f"chapter_{int(getattr(STATE, 'chapter', 1))}")
+                return
             if mission_id == "cave_in_rescue":
-                self._start_dialogue(
-                    speaker="Guild Clerk",
-                    lines=[
-                        "We should be celebrating... but listen.",
-                        "Those 'rescuers' in red robes are already spinning the story.",
-                        "They'll take credit. They'll call you a helper.",
-                        "And if you protest... they'll make sure you can't.",
-                        "(Later, outside the hall...)",
-                        "A sharp pain catches you between the ribs. You hit the ground.",
-                        "Voices laugh: 'History belongs to the strong.'",
-                        f"When you wake, the town is cheering {CHILDREN_OF_THE_NEPHIL}'s 'heroic rescue'.",
-                    ],
-                    on_finish=self._after_cave_in_betrayal,
-                )
+                STATE.set(FLAG_CULT_STOLE_CREDIT)
+                STATE.hp = max(1, min(STATE.hp, max(1, STATE.max_hp_total() // 2)))
+                self.message = f"{CHILDREN_OF_THE_NEPHIL} stole the credit. You were left bruised—and furious."
+                self._play_cutscene("ch3_betrayal")
+                return
             if mission_id == "rival_hostage":
                 STATE.set(FLAG_RIVAL_RESCUED)
                 STATE.unset(FLAG_RIVAL_KIDNAPPED)
-                self._start_dialogue(
-                    speaker="Guild Clerk",
-                    lines=[
-                        "You got them back. The medics are taking over.",
-                        "Whatever you two had going on... let it go.",
-                        f"{CHILDREN_OF_THE_NEPHIL} doesn't care about pride—only leverage.",
-                    ],
-                )
+                self._play_cutscene("ch4_rescue")
+                return
             if mission_id == "nimrods_bow_find":
                 # Part I climax: bow stolen, recruit vanishes.
                 STATE.set(FLAG_BOW_STOLEN)
                 STATE.set(FLAG_MET_RECRUIT)
-                self._start_dialogue(
-                    speaker="Guild Clerk",
-                    lines=[
-                        "The bow... was on the table. Now it's gone.",
-                        "The new recruit is gone too.",
-                        f"A note is pinned to the door: '{CHILDREN_OF_THE_NEPHIL} claim what was always ours.'",
-                        "Part I ends here. The fallout starts now.",
-                    ],
-                )
+                self._play_cutscene("ch5_theft")
                 return
             if mission_id == "nimrods_bow_destroy":
                 STATE.set(FLAG_BOW_DESTROYED)
                 STATE.set(FLAG_ARROW_TIP_LOST)
                 STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 7)
+                self._play_cutscene("chapter_7")
+                return
                 self._start_dialogue(
                     speaker="Professor",
                     lines=[
@@ -270,6 +361,8 @@ class GuildScene(Scene):
                 STATE.set(FLAG_FOUND_ARROWHEAD_MAP)
                 STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 8)
                 STATE.mission_board = "guild"
+                self._play_cutscene("chapter_8")
+                return
                 self._start_dialogue(
                     speaker="Professor",
                     lines=[
@@ -281,6 +374,8 @@ class GuildScene(Scene):
                 return
             if mission_id == "tropic_arrowhead":
                 STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 9)
+                self._play_cutscene("chapter_9")
+                return
                 self._start_dialogue(
                     speaker="Professor",
                     lines=[
@@ -294,6 +389,8 @@ class GuildScene(Scene):
                 STATE.chapter = max(int(getattr(STATE, "chapter", 1)), 10)
                 STATE.set(FLAG_POSTGAME_UNLOCKED)
                 STATE.set(FLAG_CHILDREN_EXPERIMENT_SUCCEEDED)
+                self._play_cutscene("chapter_10")
+                return
                 self._start_dialogue(
                     speaker="Professor",
                     lines=[
