@@ -40,7 +40,7 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH2_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 2 â€” The Grand Search",
+                    title="Chapter 2 — The Grand Search",
                     body=(
                         "You wake to a backpack that isn't yours.\n\n"
                         "Ren (TA) has labeled everything in neat ink: ROPE, TORCHES, WATER.\n"
@@ -68,7 +68,7 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH3_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 3 â€” Cave-in",
+                    title="Chapter 3 — Cave-in",
                     body=(
                         "A courier arrives breathless, snow in their hair and panic in their hands.\n\n"
                         "\"The mine collapsed,\" they say. \"People are trapped. Dozens.\"\n\n"
@@ -118,7 +118,7 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH4_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 4 â€” Rivalry",
+                    title="Chapter 4 — Rivalry",
                     body=(
                         "Klaus corners you in the Guild Hall like a lecture.\n\n"
                         "\"Missions. Relics. Rescues,\" he says.\n"
@@ -127,7 +127,7 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
                         "The Professor says nothing.\n\n"
                         "You tell yourself it's just competition.\n"
                         "Just momentum.\n"
-                        "Justâ€”fun."
+                        "Just—fun."
                     ),
                 ),
                 CutscenePage(
@@ -173,12 +173,12 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH5_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 5 â€” Not What They Seem (Part I)",
+                    title="Chapter 5 — Not What They Seem (Part I)",
                     body=(
                         "The new recruit arrives smiling too easily.\n\n"
                         "Klaus calls them \"eager.\" Ren calls them \"nice.\" Lena calls them \"convenient.\"\n\n"
-                        "Then a report comes in: a tower where languages donâ€™t belong together.\n"
-                        "A structure that shouldnâ€™t exist.\n\n"
+                        "Then a report comes in: a tower where languages don’t belong together.\n"
+                        "A structure that shouldn’t exist.\n\n"
                         "The Professor says one word like a warning:\n"
                         "\"Babel.\""
                     ),
@@ -209,10 +209,10 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH6_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 6 â€” Not What They Seem (Part II)",
+                    title="Chapter 6 — Not What They Seem (Part II)",
                     body=(
-                        "The Professor doesnâ€™t raise his voice.\n"
-                        "He doesnâ€™t need to.\n\n"
+                        "The Professor doesn’t raise his voice.\n"
+                        "He doesn’t need to.\n\n"
                         "\"We retrieve it,\" he says.\n"
                         "\"Then we destroy it.\n"
                         "No trophies. No debate.\""
@@ -226,14 +226,14 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH7_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 7 â€” A New Land",
+                    title="Chapter 7 — A New Land",
                     body=(
                         "The bow shatters.\n"
                         "A fragment refuses to burn.\n\n"
                         "It vanishes into ice and rumor.\n\n"
                         "Base Camp goes up in a day: canvas, wood, and urgency.\n"
-                        "You can feel it in your teethâ€”this isnâ€™t a quest.\n"
-                        "Itâ€™s containment."
+                        "You can feel it in your teeth—this isn’t a quest.\n"
+                        "It’s containment."
                     ),
                 )
             ],
@@ -244,7 +244,7 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH8_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 8 â€” Around the World",
+                    title="Chapter 8 — Around the World",
                     body=(
                         "The map points across the world.\n\n"
                         "Ren tries to make it sound exciting.\n"
@@ -261,7 +261,7 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
                         "Adventure, the way you imagined it as a kid.\n\n"
                         "Then you remember:\n"
                         "The Children are imagining it too.\n"
-                        "And they donâ€™t care who burns."
+                        "And they don’t care who burns."
                     ),
                 ),
             ],
@@ -272,14 +272,14 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH9_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 9 â€” Journey to the Core",
+                    title="Chapter 9 — Journey to the Core",
                     body=(
                         "The Children descend.\n"
                         "So do you.\n\n"
                         "Every step down feels older than stone.\n"
                         "Older than language.\n\n"
                         "The Flood ended the Nephil once.\n"
-                        "If the Children wake that wrath againâ€¦\n"
+                        "If the Children wake that wrath again…\n"
                         "there may not be a second chance."
                     ),
                 )
@@ -291,12 +291,12 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
             flag=FLAG_SEEN_CH10_CUTSCENE,
             pages=[
                 CutscenePage(
-                    title="Chapter 10 â€” Retirement?",
+                    title="Chapter 10 — Retirement?",
                     body=(
-                        "The world doesnâ€™t end with fireworks.\n\n"
+                        "The world doesn’t end with fireworks.\n\n"
                         "It ends with paperwork.\n"
                         "Bandages.\n"
-                        "Quiet meals you donâ€™t finish.\n\n"
+                        "Quiet meals you don’t finish.\n\n"
                         "The Professor asks you a question that hits harder than any blade:\n"
                         "\"What do you do after you survive?\""
                     ),
@@ -307,8 +307,8 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
                         "The Guild keeps its doors open.\n"
                         "School keeps its doors open.\n"
                         "Your future opens like a corridor you can finally walk.\n\n"
-                        "And somewhere, anonymously, patientlyâ€¦\n"
-                        "the Childrenâ€™s one successful experiment breathes.\n\n"
+                        "And somewhere, anonymously, patiently…\n"
+                        "the Children’s one successful experiment breathes.\n\n"
                         "Waiting for the right time."
                     ),
                 ),
@@ -316,4 +316,3 @@ def cutscene_for_event(event_id: str) -> CutsceneDef | None:
         )
 
     return None
-

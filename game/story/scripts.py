@@ -117,7 +117,7 @@ def script_for_npc(npc_id: str, state: GameState) -> DialogueScript | None:
                     speaker="Professor",
                     lines=[
                         "The bow is shattered. But one fragment slipped away.",
-                        "We chase it into the ice. Not for gloryâ€”for containment.",
+                        "We chase it into the ice. Not for glory—for containment.",
                         "Check the Base Camp board. We'll operate from there until we have a lead.",
                     ],
                 )

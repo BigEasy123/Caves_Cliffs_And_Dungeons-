@@ -350,7 +350,7 @@ class GuildScene(Scene):
                     speaker="Professor",
                     lines=[
                         "Good. It's over... mostly.",
-                        "When the bow shattered, a single tip refused to burnâ€”like the world itself wouldn't let it vanish.",
+                        "When the bow shattered, a single tip refused to burn—like the world itself wouldn't let it vanish.",
                         "We've lost it in a land of ice.",
                         f"And {CHILDREN_OF_THE_NEPHIL} will chase it. So will we.",
                         "Head to the Outskirts gate. An Ice Expedition Base Camp is being established.",
@@ -366,7 +366,7 @@ class GuildScene(Scene):
                 self._start_dialogue(
                     speaker="Professor",
                     lines=[
-                        "This map... it points to the arrow tipâ€”across the world.",
+                        "This map... it points to the arrow tip—across the world.",
                         "Pack light. We race the Children from this moment on.",
                         "Chapter 8 begins: Around the World.",
                     ],
@@ -380,7 +380,7 @@ class GuildScene(Scene):
                     speaker="Professor",
                     lines=[
                         "You have it. The arrow tip.",
-                        "The trail doesn't endâ€”it dives. The Children are moving underground.",
+                        "The trail doesn't end—it dives. The Children are moving underground.",
                         "Chapter 9 begins: Journey to the Core.",
                     ],
                 )
@@ -402,7 +402,7 @@ class GuildScene(Scene):
                         "",
                         "One last report came in before we could breathe:",
                         "A single experiment of the Children of the Nephil worked.",
-                        "We don't know what it madeâ€”only that it lived.",
+                        "We don't know what it made—only that it lived.",
                         "Cliffhanger logged. The next chapter of history is waiting.",
                     ],
                 )

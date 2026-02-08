@@ -373,7 +373,7 @@
     "min_chapter": 7,
     "board": "ice_camp",
     "accept_lines": [
-      "The bow is goneâ€”but a fragment remains somewhere in the ice.",
+      "The bow is gone—but a fragment remains somewhere in the ice.",
       "Climb Mt Arot. Something ancient guards a map we need.",
       "Bring back the Arrowhead Map before the Children can."
     ],
@@ -395,7 +395,7 @@
     "mission_type": "rescue",
     "min_chapter": 8,
     "accept_lines": [
-      "The map points to a tropical islandâ€”with a volcano.",
+      "The map points to a tropical island—with a volcano.",
       "The Children will be there. They always are.",
       "Retrieve the Arrow Tip Fragment and return immediately."
     ],

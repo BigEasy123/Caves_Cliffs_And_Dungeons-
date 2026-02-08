@@ -206,7 +206,7 @@ class DungeonScene(Scene):
                     floor_cells.remove((x, y))
                 self.enemies.append(spawn_enemy(boss_id, x=x, y=y, floor=self.run.floor, combat_level=STATE.combat_level, rng=self.rng))
 
-        # Chapter 7â€“9 bosses (story beats on final floors).
+        # Chapter 7–9 bosses (story beats on final floors).
         if self.run.floor >= self.run.max_floor:
             boss_by_dungeon = {
                 "mt_arot": "ice_colossus",

@@ -43,7 +43,7 @@ class IntroCutsceneScene(Scene):
                 "title": "Origins",
                 "body": (
                     f"{player} should have been failing out.\n\n"
-                    "Most classes felt like noise. Nights blurred into the same loopâ€”"
+                    "Most classes felt like noise. Nights blurred into the same loop—"
                     "cheap light, stale air, and the weight of being stuck.\n\n"
                     "Except for one thing: history. Archaeology. The feeling that the past still had teeth."
                 ),
@@ -53,14 +53,14 @@ class IntroCutsceneScene(Scene):
                 "body": (
                     "Your professor calls you in after hours.\n\n"
                     "\"I read your work twice,\" he says. \"You're not dull. You're starving.\"\n\n"
-                    "He offers a deal: stay enrolledâ€¦ if you study abroad with a research guild."
+                    "He offers a deal: stay enrolled… if you study abroad with a research guild."
                 ),
             },
             {
                 "title": "The Truth",
                 "body": (
                     "Officially, the Guild funds expeditions.\n\n"
-                    "Unofficiallyâ€¦ it protects the timeline from a rising society calling itself the "
+                    "Unofficially… it protects the timeline from a rising society calling itself the "
                     "Children of the Nephil.\n\n"
                     "\"They want to corrupt history,\" the Professor warns. "
                     "\"To send humanity backward, one fracture at a time.\""
@@ -69,11 +69,11 @@ class IntroCutsceneScene(Scene):
             {
                 "title": "Arrival",
                 "body": (
-                    "You arrive in a small town that pretends itâ€™s ordinary.\n\n"
+                    "You arrive in a small town that pretends it’s ordinary.\n\n"
                     "But the ground has been trembling. Old ruins have reopened. "
                     "Strangers in red move like they already own the story.\n\n"
-                    "The Guild doesnâ€™t need a hero.\n"
-                    "It needs someone who can go downâ€”and come back up."
+                    "The Guild doesn’t need a hero.\n"
+                    "It needs someone who can go down—and come back up."
                 ),
             },
         ]
@@ -140,4 +140,3 @@ class IntroCutsceneScene(Scene):
             hint = "Enter/Space: begin  |  Esc: begin"
         hint_surf = self.font_small.render(hint, True, (200, 200, 210))
         surface.blit(hint_surf, (40, h - 44))
-
